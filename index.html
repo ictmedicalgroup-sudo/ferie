@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Gestione Ferie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1A3A5C;--blue:#2E6DA4;--blue-mid:#3D85C8;--blue-light:#D6E4F0;--blue-xlight:#EBF4FC;
+  --accent:#E8A838;--accent-light:#FEF3DC;
+  --red:#C0392B;--red-light:#FDECEA;--green:#27AE60;--green-light:#E8F8EF;
+  --purple:#8E44AD;--purple-light:#F4EAF9;
+  --g50:#F8F9FC;--g100:#F0F2F7;--g200:#E2E6EF;--g300:#C8D0E0;
+  --g500:#7A8399;--g700:#3D4560;--g900:#1A1F35;
+  --sh-sm:0 1px 3px rgba(26,58,92,.08),0 1px 2px rgba(26,58,92,.05);
+  --sh-md:0 4px 12px rgba(26,58,92,.10);--sh-lg:0 12px 32px rgba(26,58,92,.14),0 4px 10px rgba(26,58,92,.07);
+  --r:10px;--rsm:6px;--rlg:16px;
+  font-family:'Raleway',sans-serif;
+}
+body{background:var(--g50);color:var(--g900);min-height:100vh;font-size:14px}
+
+/* ── Layout ── */
+#app{display:flex;min-height:100vh}
+#sidebar{width:230px;flex-shrink:0;background:var(--navy);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100}
+#main{margin-left:230px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+
+/* ── Sidebar ── */
+.sb-logo{padding:22px 18px 18px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sb-icon{width:36px;height:36px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:9px}
+.sb-tag{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.4)}
+.sb-title{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.3px;margin-top:2px}
+.sb-nav{flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:1px;overflow-y:auto}
+.sb-sec{font-size:9px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:rgba(255,255,255,.28);padding:10px 8px 4px}
+.nb{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:var(--rsm);color:rgba(255,255,255,.58);font-size:13px;font-weight:500;font-family:'Raleway',sans-serif;cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:all .17s}
+.nb:hover{background:rgba(255,255,255,.08);color:#fff}
+.nb.active{background:rgba(46,109,164,.55);color:#fff}
+.nb-ic{font-size:15px;width:18px;text-align:center}
+.sb-foot{padding:14px 10px;border-top:1px solid rgba(255,255,255,.1)}
+.sb-un{font-size:13px;font-weight:600;color:rgba(255,255,255,.75);margin-bottom:3px}
+.sb-ur{font-size:11px;margin-bottom:8px}
+
+/* ── Topbar ── */
+#topbar{background:#fff;border-bottom:1px solid var(--g200);padding:0 26px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:var(--sh-sm)}
+#tb-title{font-size:17px;font-weight:700}
+.tb-r{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--g500)}
+#page-body{padding:24px;flex:1}
+
+/* ── Cards ── */
+.card{background:#fff;border-radius:var(--rlg);box-shadow:var(--sh-sm);border:1px solid var(--g200);overflow:hidden;margin-bottom:20px}
+.ch{padding:15px 20px;border-bottom:1px solid var(--g200);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.ct{font-size:14px;font-weight:700}
+.cb{padding:20px}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border-radius:var(--rsm);font-family:'Raleway',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .17s;white-space:nowrap}
+.bp{background:var(--blue);color:#fff}.bp:hover{background:var(--navy)}
+.bs{background:var(--g100);color:var(--g700);border:1px solid var(--g200)}.bs:hover{background:var(--g200)}
+.bd{background:var(--red-light);color:var(--red)}.bd:hover{background:var(--red);color:#fff}
+.bsm{padding:4px 10px;font-size:12px}
+.bic{padding:6px;border-radius:var(--rsm);background:var(--g100);border:1px solid var(--g200);cursor:pointer;transition:all .17s;font-size:14px;font-family:'Raleway',sans-serif}.bic:hover{background:var(--g200)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Badges ── */
+.bg{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.bgf{background:var(--blue-light);color:var(--navy)}.bgp{background:var(--accent-light);color:#7D5A00}
+.bgc{background:var(--red-light);color:var(--red)}.bgm{background:var(--purple-light);color:var(--purple)}
+.bga{background:var(--navy);color:#fff}.bgas{background:var(--blue-light);color:var(--navy)}.bgu{background:var(--g100);color:var(--g700)}
+.bg-on{background:var(--green-light);color:#1A7A40}.bg-off{background:var(--g100);color:var(--g500)}
+
+/* ── Stats ── */
+.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:22px}
+.sc{background:#fff;border-radius:var(--r);padding:16px;border:1px solid var(--g200);box-shadow:var(--sh-sm);display:flex;gap:13px;align-items:center}
+.si{width:42px;height:42px;border-radius:var(--rsm);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.sl{font-size:10px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.5px}
+.sv{font-size:26px;font-weight:800;color:var(--g900);line-height:1;margin-top:2px}
+
+/* ── Calendario ── */
+.cctrls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cmn{display:flex;align-items:center;gap:8px}
+.cml{font-size:15px;font-weight:700;min-width:155px;text-align:center}
+.csel{padding:6px 11px;border:1px solid var(--g300);border-radius:var(--rsm);font-family:'Raleway',sans-serif;font-size:13px;background:#fff;outline:none;cursor:pointer;font-weight:500}
+.csel:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,109,164,.13)}
+.cleg{display:flex;gap:10px;padding:10px 16px;border-bottom:1px solid var(--g100);flex-wrap:wrap;align-items:center}
+.clh{font-size:11px;color:var(--g500);margin-left:auto}
+.cscr{overflow-x:auto}
+.ctbl{width:100%;border-collapse:collapse;min-width:860px;font-size:12px}
+.ctbl th{padding:7px 4px;text-align:center;font-weight:700;color:var(--g500);font-size:10px;letter-spacing:.4px;text-transform:uppercase;background:var(--g50);border-bottom:2px solid var(--g200);position:sticky;top:0;user-select:none}
+.ctbl th.chn{text-align:left;padding-left:14px;min-width:145px;position:sticky;left:0;background:var(--g50);z-index:2}
+.ctbl th.we{color:var(--red)}.ctbl th.td0{background:var(--blue-xlight);color:var(--blue)}
+.ctbl td{padding:0;border:1px solid var(--g200);vertical-align:top;min-width:26px;max-width:36px}
+.ctbl td.chn{padding:0 14px;min-width:145px;max-width:190px;font-weight:500;background:#fff;position:sticky;left:0;z-index:1;border-left:none;border-right:2px solid var(--g200);vertical-align:middle;font-size:12.5px}
+.ctbl tr{height:34px}
+.ctbl tr:hover td.chn{background:var(--g50)}
+.ctbl tr:hover td.cc{background:var(--g50)}
+.crow-cl td.chn{color:var(--red);font-size:12px;font-weight:700}
+.cc{cursor:pointer;width:100%;height:100%;min-height:32px;display:flex;align-items:center;justify-content:center;transition:background .12s}
+.cc:hover{background:var(--blue-xlight)!important}
+.cc.we{background:rgba(240,242,247,.55)}.cc.td0{background:rgba(46,109,164,.05)}.cc.cld{background:rgba(192,57,43,.07)}
+.cd{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0}
+.dF{background:var(--blue);color:#fff}.dFm{background:var(--blue-mid);color:#fff}.dFp{background:var(--blue-light);color:var(--navy)}
+.dP{background:var(--accent);color:#fff}.dC{background:var(--red);color:#fff;border-radius:3px;width:100%;height:100%;font-size:11px}.dM{background:var(--purple);color:#fff}
+
+/* ── Tables ── */
+.dt{width:100%;border-collapse:collapse;font-size:13px}
+.dt th{padding:9px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;background:var(--g50);border-bottom:2px solid var(--g200)}
+.dt td{padding:10px 14px;border-bottom:1px solid var(--g100);color:var(--g700);vertical-align:middle}
+.dt tr:last-child td{border-bottom:none}.dt tr:hover td{background:var(--g50)}
+.tda{display:flex;gap:6px}
+.tn{font-weight:600;font-size:13.5px;color:var(--g900)}.ts{font-size:11.5px;color:var(--g500);margin-top:1px}
+
+/* ── Forms ── */
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.fl{font-size:11.5px;font-weight:700;color:var(--g700);text-transform:uppercase;letter-spacing:.4px}
+.fi,.fse,.fta{padding:8px 11px;border:1.5px solid var(--g300);border-radius:var(--rsm);font-family:'Raleway',sans-serif;font-size:13.5px;color:var(--g900);background:#fff;outline:none;transition:border-color .17s,box-shadow .17s;width:100%}
+.fi:focus,.fse:focus,.fta:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,109,164,.13)}
+.fta{resize:vertical;min-height:75px}.fse{cursor:pointer}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fch{display:flex;flex-wrap:wrap;gap:8px;padding:9px 12px;border:1.5px solid var(--g300);border-radius:var(--rsm);background:#fff}
+.fci{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px;font-weight:500}
+.fci input{cursor:pointer;accent-color:var(--blue)}
+
+/* ── Modal ── */
+.mo{position:fixed;inset:0;background:rgba(26,31,53,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:500;padding:20px}
+.mo.hid{display:none}
+.mb{background:#fff;border-radius:var(--rlg);box-shadow:var(--sh-lg);width:100%;max-width:450px;overflow:hidden;max-height:90vh;display:flex;flex-direction:column}
+.mh{padding:18px 20px;border-bottom:1px solid var(--g200);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.mt{font-size:15px;font-weight:700}.mbdy{padding:20px;overflow-y:auto;flex:1}.mf{padding:14px 20px;border-top:1px solid var(--g200);display:flex;gap:9px;justify-content:flex-end;flex-shrink:0}
+
+/* ── Toggle ── */
+.tw{display:flex;align-items:center;gap:9px;cursor:pointer}
+.tg{position:relative;width:36px;height:20px;flex-shrink:0}
+.tg input{opacity:0;width:0;height:0;position:absolute}
+.ts2{width:36px;height:20px;background:var(--g300);border-radius:10px;transition:background .2s;display:block;cursor:pointer}
+.ts2::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+input:checked+.ts2{background:var(--blue)}
+input:checked+.ts2::after{transform:translateX(16px)}
+
+/* ── Misc ── */
+.alert{padding:11px 15px;border-radius:var(--rsm);font-size:13px;display:flex;align-items:flex-start;gap:9px;line-height:1.5}
+.ai{background:var(--blue-xlight);color:var(--navy);border:1px solid var(--blue-light)}
+.ae{background:var(--red-light);color:var(--red);border:1px solid #F5C6C2}
+.aw{background:var(--accent-light);color:#7D5A00;border:1px solid #F5D78A}
+.emp{text-align:center;padding:44px 20px;color:var(--g500)}
+.emi{font-size:40px;margin-bottom:12px}
+.emt{font-size:14px;font-weight:600;color:var(--g700)}.ems{font-size:12.5px;margin-top:5px}
+.schip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:20px;font-size:11.5px;font-weight:600;border:1.5px solid}
+.sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.logr{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--g100);align-items:flex-start}
+.logr:last-child{border-bottom:none}
+.lic{width:30px;height:30px;border-radius:50%;background:var(--g100);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:1px}
+.lt{font-size:10.5px;color:var(--g500);font-family:monospace;margin-bottom:2px}.lx{font-size:13px;color:var(--g700);line-height:1.45}.lw{font-weight:700;color:var(--g900)}
+.mailc{border:1.5px solid var(--g200);border-radius:var(--r);overflow:hidden;background:#fff;margin-bottom:12px}
+.mch{padding:13px 17px;background:var(--g50);display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--g200);flex-wrap:wrap;gap:8px}
+.mcb{padding:14px 17px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mfl{font-size:10px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.mfv{font-size:13px;color:var(--g900);font-weight:500}
+.mprev{padding:9px 17px;background:var(--blue-xlight);border-top:1px solid var(--blue-light);font-size:11.5px;color:var(--navy)}
+.sw{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;flex-shrink:0;transition:border-color .15s}
+.sw.sel{border-color:var(--g900)}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--g300);border-radius:3px}
+.spn{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;bottom:24px;right:24px;background:var(--g900);color:#fff;padding:11px 18px;border-radius:var(--r);font-size:13.5px;font-weight:500;box-shadow:var(--sh-lg);z-index:9999;transform:translateY(60px);opacity:0;transition:all .25s ease;pointer-events:none;max-width:340px;line-height:1.4}
+#toast.show{transform:translateY(0);opacity:1}#toast.tok{background:#1A7A40}#toast.terr{background:var(--red)}
+.hid{display:none!important}
+.fi-an{animation:fian .25s ease}@keyframes fian{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ── Login ── */
+#lp{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy) 0%,#0D2240 55%,#162E50 100%);position:relative;overflow:hidden}
+.lbg{position:absolute;border-radius:50%;opacity:.06;pointer-events:none}
+.lcard{background:#fff;border-radius:var(--rlg);padding:38px;width:100%;max-width:390px;box-shadow:var(--sh-lg);position:relative;z-index:1}
+.llogo{text-align:center;margin-bottom:26px}
+.lic2{width:54px;height:54px;background:var(--navy);border-radius:13px;display:inline-flex;align-items:center;justify-content:center;font-size:25px;margin-bottom:11px}
+.ltag{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--g500)}
+.lttl{font-size:21px;font-weight:800;color:var(--navy);letter-spacing:-.5px;margin-top:3px}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- LOGIN -->
+<div id="lp">
+  <div class="lbg" style="width:500px;height:500px;top:-180px;right:-120px;background:var(--accent)"></div>
+  <div class="lbg" style="width:320px;height:320px;bottom:-80px;left:40px;background:var(--blue-mid)"></div>
+  <div class="lcard">
+    <div class="llogo">
+      <div class="lic2">📅</div>
+      <div class="ltag">Sistema di gestione</div>
+      <div class="lttl">Gestione Ferie</div>
+    </div>
+    <div id="lerr" class="alert ae hid" style="margin-bottom:14px"></div>
+    <div class="fg"><label class="fl">Email</label><input class="fi" id="lem" type="email" placeholder="utente@clinica.it" autocomplete="username"/></div>
+    <div class="fg" style="margin-bottom:20px"><label class="fl">Password</label><input class="fi" id="lpw" type="password" autocomplete="current-password"/></div>
+    <button class="btn bp" id="lbtn" style="width:100%;justify-content:center;padding:10px;font-size:14px">🔐 Accedi</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hid">
+  <aside id="sidebar">
+    <div class="sb-logo"><div class="sb-icon">📅</div><div class="sb-tag">Sistema</div><div class="sb-title">Gestione Ferie</div></div>
+    <nav class="sb-nav" id="sbnav"></nav>
+    <div class="sb-foot">
+      <div class="sb-un" id="sbun">—</div>
+      <div class="sb-ur" id="sbur"></div>
+      <button class="nb" id="lout"><span class="nb-ic">🚪</span>Esci</button>
+    </div>
+  </aside>
+  <main id="main">
+    <div id="topbar"><span id="tbt">—</span><div class="tb-r"><span id="tbd"></span></div></div>
+    <div id="pb"></div>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="mo hid" id="mov">
+  <div class="mb" id="mbox">
+    <div class="mh"><span class="mt" id="mtit">—</span><button class="bic" id="mcls">✕</button></div>
+    <div class="mbdy" id="mbdy"></div>
+    <div class="mf" id="mft"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ══════════════════════════════════════════
+   CONFIG — inserire URL e chiave Supabase
+══════════════════════════════════════════ */
+const CFG = {
+  URL: 'https://iczsdqcnvauopwkuspti.supabase.co',
+  KEY: 'sb_publishable_vijGmY6ZHzPiJ0XhGSLgug_Hqpzym5V',   // chiave anon/public
+};
+const T = n => `ferie_${n}`;   // prefisso tabelle
+
+/* ══════════════════════════════════════════
+   STATO
+══════════════════════════════════════════ */
+const S = {
+  user: null, token: null,
+  sedi: [], utenti: [], eventi: [], log: [], mailCfg: [],
+  page: 'calendario',
+  cal: { y: new Date().getFullYear(), m: new Date().getMonth(), sid: null },
+};
+
+/* ══════════════════════════════════════════
+   COSTANTI
+══════════════════════════════════════════ */
+const MESI   = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const GIORNI = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+const TIPO = { ferie:{l:'Ferie',e:'🌴'}, permesso:{l:'Permesso',e:'⏰'}, chiusura:{l:'Chiusura',e:'🔒'}, malattia:{l:'Malattia',e:'🤒'} };
+const DURATA = { intera:'Intera giornata', mattina:'Solo mattina', pomeriggio:'Solo pomeriggio' };
+const RUOLO  = { admin:{l:'Admin'}, admin_sede:{l:'Admin Sede'}, utente:{l:'Utente'} };
+const NAV    = [
+  {id:'calendario', l:'Calendario',      ic:'📅', sec:'principale'},
+  {id:'sedi',       l:'Sedi',            ic:'🏢', sec:'principale',  r:['admin']},
+  {id:'utenti',     l:'Utenti',          ic:'👥', sec:'principale',  r:['admin','admin_sede']},
+  {id:'email',      l:'Email riepilogo', ic:'📧', sec:'impostazioni', r:['admin','admin_sede']},
+  {id:'log',        l:'Log',             ic:'📋', sec:'impostazioni', r:['admin']},
+];
+const LOG_IC = {login:'🔐',logout:'🚪',calendario_insert:'📅',calendario_delete:'🗑',utente_create:'👤',sede_create:'🏢',email_inviata:'📧'};
+const SWATCHES = ['#2E6DA4','#27AE60','#8E44AD','#E8A838','#C0392B','#16A085','#E74C3C','#1ABC9C'];
+
+/* ══════════════════════════════════════════
+   UTILITÀ
+══════════════════════════════════════════ */
+const $  = id => document.getElementById(id);
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const uid = () => (crypto.randomUUID||(() => Math.random().toString(36).slice(2,11)))();
+
+function fmt(d){
+  if(!d) return '—';
+  const dt = typeof d==='string'?new Date(d.length===10?d+'T00:00:00':d):d;
+  return dt.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function fmtDt(d){
+  if(!d) return '—';
+  const dt = typeof d==='string'?new Date(d):d;
+  return dt.toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+function dim(y,m){ return new Date(y,m+1,0).getDate(); }
+function isWE(y,m,d){ const w=new Date(y,m,d).getDay(); return w===0||w===6; }
+function isTd(y,m,d){ const t=new Date(); return t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===d; }
+function todayStr(){ const t=new Date(); return `${t.getFullYear()}-${p2(t.getMonth()+1)}-${p2(t.getDate())}`; }
+function p2(n){ return String(n).padStart(2,'0'); }
+function addDays(n,base=new Date()){ const d=new Date(base); d.setDate(d.getDate()+n); return d; }
+
+let _tid; 
+function toast(msg,type='ok'){
+  const el=$('toast'); clearTimeout(_tid);
+  el.textContent=msg; el.className=`show t${type}`;
+  _tid=setTimeout(()=>el.className='',3000);
+}
+
+/* ══════════════════════════════════════════
+   SUPABASE REST (senza SDK)
+══════════════════════════════════════════ */
+async function db(method,table,opts={}){
+  const {flt='',body=null,sel='*',ord='',lim=''} = opts;
+  let url=`${CFG.URL}/rest/v1/${table}?select=${sel}`;
+  if(flt) url+=`&${flt}`;
+  if(ord) url+=`&order=${ord}`;
+  if(lim) url+=`&limit=${lim}`;
+  const headers={
+    'apikey':CFG.KEY,
+    'Authorization':`Bearer ${S.token||CFG.KEY}`,
+    'Content-Type':'application/json',
+    'Prefer':method==='POST'?'return=representation':method==='PATCH'?'return=representation':'',
+  };
+  const res=await fetch(url,{method,headers,body:body?JSON.stringify(body):undefined});
+  if(!res.ok){ const e=await res.text(); throw new Error(`${method} ${table}: ${e}`); }
+  return method==='DELETE'?null:res.json();
+}
+
+async function supaLogin(email,password){
+  const res=await fetch(`${CFG.URL}/auth/v1/token?grant_type=password`,{
+    method:'POST', headers:{'apikey':CFG.KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email,password}),
+  });
+  const data=await res.json();
+  if(!res.ok) throw new Error(data.error_description||data.message||'Credenziali non valide');
+  return data;
+}
+
+async function supaLogout(){
+  try{ await fetch(`${CFG.URL}/auth/v1/logout`,{method:'POST',headers:{'apikey':CFG.KEY,'Authorization':`Bearer ${S.token}`}}); }catch(e){}
+}
+
+async function logAct(azione,dettaglio){
+  try{ await db('POST',T('log'),{body:{utente_id:S.user?.id,azione,dettaglio}}); }catch(e){}
+}
+
+/* ══════════════════════════════════════════
+   CARICAMENTO DATI
+══════════════════════════════════════════ */
+async function loadAll(){
+  const m=S.cal.m, y=S.cal.y;
+  const from=`${y}-${p2(m)}-01`, to=`${y}-${p2(m+2)}-01`; // ±1 mese per buffer
+  const [sedi,utenti,eventi,log,mail,assoc] = await Promise.all([
+    db('GET',T('sedi'),{ord:'nome.asc'}),
+    db('GET',T('profili'),{ord:'cognome.asc'}),
+    db('GET',T('calendario'),{flt:`data=gte.${y}-${p2(m-1>0?m-1:1)}-01&data=lte.${y}-${p2(m+2>12?12:m+2)}-${dim(y,m)}`,ord:'data.asc'}),
+    db('GET',T('log'),{ord:'created_at.desc',lim:'200'}),
+    db('GET',T('mail_config'),{ord:'created_at.asc'}),
+    db('GET',T('utenti_sedi')),
+  ]);
+  const sp={};
+  (assoc||[]).forEach(a=>{ if(!sp[a.utente_id])sp[a.utente_id]=[]; sp[a.utente_id].push(a.sede_id); });
+  S.sedi    = sedi||[];
+  S.utenti  = (utenti||[]).map(u=>({...u,sedi:sp[u.id]||[]}));
+  S.eventi  = eventi||[];
+  S.log     = log||[];
+  S.mailCfg = mail||[];
+  if(!S.cal.sid && S.sedi.length) S.cal.sid=S.sedi[0].id;
+}
+
+async function loadEventi(){
+  const y=S.cal.y,m=S.cal.m;
+  S.eventi=await db('GET',T('calendario'),{
+    flt:`data=gte.${y}-${p2(m+1)}-01&data=lte.${y}-${p2(m+1)}-${dim(y,m)}`,ord:'data.asc'
+  })||[];
+}
+
+/* ══════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════ */
+function renderSidebar(){
+  const items=NAV.filter(n=>!n.r||n.r.includes(S.user?.ruolo));
+  const secs=[...new Set(items.map(n=>n.sec))];
+  $('sbnav').innerHTML=secs.map(sec=>`
+    <div class="sb-sec">${sec}</div>
+    ${items.filter(n=>n.sec===sec).map(n=>`
+      <button class="nb${S.page===n.id?' active':''}" data-pg="${n.id}">
+        <span class="nb-ic">${n.ic}</span>${n.l}
+      </button>`).join('')}
+  `).join('');
+  $('sbnav').querySelectorAll('.nb[data-pg]').forEach(b=>b.addEventListener('click',()=>goPage(b.dataset.pg)));
+  $('sbun').textContent=S.user?`${S.user.nome} ${S.user.cognome}`:'—';
+  $('sbur').innerHTML=S.user?bRuolo(S.user.ruolo):'';
+}
+
+function goPage(pg){
+  S.page=pg;
+  const n=NAV.find(x=>x.id===pg);
+  $('tbt').textContent=n?.l||pg;
+  renderSidebar();
+  renderPage();
+}
+
+/* ══════════════════════════════════════════
+   RENDER DISPATCHER
+══════════════════════════════════════════ */
+function renderPage(){
+  const pb=$('pb');
+  pb.innerHTML=`<div style="padding:50px;text-align:center"><span class="spn" style="border-color:rgba(46,109,164,.3);border-top-color:var(--blue);width:28px;height:28px"></span></div>`;
+  if     (S.page==='calendario') renderCal(pb);
+  else if(S.page==='sedi')       renderSedi(pb);
+  else if(S.page==='utenti')     renderUtenti(pb);
+  else if(S.page==='email')      renderEmail(pb);
+  else if(S.page==='log')        renderLog(pb);
+}
+
+/* ══════════════════════════════════════════
+   HELPERS HTML
+══════════════════════════════════════════ */
+function bTipo(t){ const c=TIPO[t]; return c?`<span class="bg bg${t[0]}">${c.e} ${c.l}</span>`:t; }
+function bRuolo(r){ return `<span class="bg bg${r==='admin'?'a':r==='admin_sede'?'as':'u'}">${RUOLO[r]?.l||r}</span>`; }
+function sedeDot(sid){
+  const s=S.sedi.find(x=>x.id===sid); if(!s) return '';
+  return `<span class="schip" style="border-color:${s.colore}55;background:${s.colore}18;color:${s.colore}"><span class="sdot" style="background:${s.colore}"></span>${esc(s.nome)}</span>`;
+}
+function uNome(uid){ const u=S.utenti.find(x=>x.id===uid); return u?`${u.nome} ${u.cognome}`:'—'; }
+
+/* ══════════════════════════════════════════
+   PAGINA CALENDARIO
+══════════════════════════════════════════ */
+function renderCal(pb){
+  const {y,m,sid}=S.cal;
+  const nd=dim(y,m);
+  const isAdm=S.user?.ruolo==='admin'||S.user?.ruolo==='admin_sede';
+  const sede=S.sedi.find(s=>s.id===sid)||S.sedi[0];
+  const sId=sede?.id;
+  const pfx=`${y}-${p2(m+1)}-`;
+  const ev=S.eventi.filter(e=>e.data.startsWith(pfx)&&e.sede_id===sId);
+  const eMap={}; ev.forEach(e=>{ const d=parseInt(e.data.slice(8,10)); if(!eMap[d])eMap[d]=[]; eMap[d].push(e); });
+  const closed=new Set(ev.filter(e=>e.tipo==='chiusura').map(e=>parseInt(e.data.slice(8,10))));
+  const utenti=S.utenti.filter(u=>u.sedi.includes(sId));
+  const rows=[{id:'__c__',cl:true,lbl:'🔒 Chiusura sede'},...utenti.map(u=>({...u,lbl:`${u.nome} ${u.cognome}`}))];
+
+  const thDays=Array.from({length:nd},(_,i)=>{
+    const d=i+1,we=isWE(y,m,d),td=isTd(y,m,d);
+    return `<th class="${we?'we':''} ${td?'td0':''}">${p2(d)}<br><span style="font-weight:400;font-size:8px">${GIORNI[new Date(y,m,d).getDay()]}</span></th>`;
+  }).join('');
+
+  const trs=rows.map(row=>{
+    const cells=Array.from({length:nd},(_,i)=>{
+      const d=i+1,we=isWE(y,m,d),td=isTd(y,m,d);
+      const de=eMap[d]||[];
+      let ev2=row.cl?de.find(e=>e.tipo==='chiusura'):de.find(e=>e.utente_id===row.id);
+      let dot='';
+      if(ev2){
+        if(ev2.tipo==='chiusura') dot=`<div class="cd dC">✕</div>`;
+        else{
+          const dc=ev2.tipo==='ferie'?(ev2.durata==='mattina'?'dFm':ev2.durata==='pomeriggio'?'dFp':'dF'):ev2.tipo==='permesso'?'dP':'dM';
+          const lt={ferie:'F',permesso:'P',malattia:'M'}[ev2.tipo]||'?';
+          dot=`<div class="cd ${dc}">${lt}</div>`;
+        }
+      }
+      const cld2=closed.has(d)&&!row.cl;
+      const eid=ev2?ev2.id:'';
+      const tip=ev2?`title="${esc(TIPO[ev2.tipo]?.l||'')} — ${ev2.tipo==='chiusura'?'Chiusura sede':esc(uNome(ev2.utente_id))}${ev2.note?' — '+esc(ev2.note):''}"`:'' ;
+      return `<td><div class="cc${we?' we':''}${td?' td0':''}${(row.cl&&ev2)||cld2?' cld':''}" data-d="${d}" data-u="${esc(row.cl?'':row.id)}" data-e="${esc(eid)}" data-cl="${row.cl?1:0}" ${tip}>${dot}</div></td>`;
+    }).join('');
+    return `<tr class="${row.cl?'crow-cl':''}"><td class="chn">${esc(row.lbl)}</td>${cells}</tr>`;
+  }).join('');
+
+  const fN=ev.filter(e=>e.tipo==='ferie').length;
+  const pN=ev.filter(e=>e.tipo==='permesso').length;
+  const cN=ev.filter(e=>e.tipo==='chiusura').length;
+  const mN=ev.filter(e=>e.tipo==='malattia').length;
+
+  pb.innerHTML=`<div class="fi-an">
+    <div class="sg">
+      <div class="sc"><div class="si" style="background:var(--blue-xlight)">🌴</div><div><div class="sl">Ferie mese</div><div class="sv">${fN}</div></div></div>
+      <div class="sc"><div class="si" style="background:var(--accent-light)">⏰</div><div><div class="sl">Permessi</div><div class="sv">${pN}</div></div></div>
+      <div class="sc"><div class="si" style="background:var(--red-light)">🔒</div><div><div class="sl">Chiusure</div><div class="sv">${cN}</div></div></div>
+      <div class="sc"><div class="si" style="background:var(--purple-light)">🤒</div><div><div class="sl">Malattie</div><div class="sv">${mN}</div></div></div>
+    </div>
+    <div class="card">
+      <div class="ch">
+        <div class="cctrls">
+          <div class="cmn">
+            <button class="bic" id="cprev">◀</button>
+            <span class="cml">${MESI[m]} ${y}</span>
+            <button class="bic" id="cnext">▶</button>
+          </div>
+          <select class="csel" id="csel">
+            ${S.sedi.map(s=>`<option value="${s.id}"${s.id===sId?' selected':''}>${esc(s.nome)}</option>`).join('')}
+          </select>
+          ${sede?sedeDot(sede.id):''}
+        </div>
+        ${isAdm?`<button class="btn bp bsm" id="cadd">+ Aggiungi</button>`:''}
+      </div>
+      <div class="cleg">
+        ${Object.entries(TIPO).map(([k,v])=>`<span class="bg bg${k[0]}">${v.e} ${v.l}</span>`).join('')}
+        <span class="clh">${isAdm?'💡 Clicca su una cella per aggiungere/vedere eventi':'👁 Solo visualizzazione'}</span>
+      </div>
+      <div class="cscr">
+        <table class="ctbl">
+          <thead><tr><th class="chn">Dipendente</th>${thDays}</tr></thead>
+          <tbody>${trs}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+
+  $('cprev').addEventListener('click',()=>{
+    S.cal.m===0?(S.cal.y--,S.cal.m=11):S.cal.m--;
+    loadEventi().then(()=>renderPage());
+  });
+  $('cnext').addEventListener('click',()=>{
+    S.cal.m===11?(S.cal.y++,S.cal.m=0):S.cal.m++;
+    loadEventi().then(()=>renderPage());
+  });
+  $('csel').addEventListener('change',e=>{S.cal.sid=e.target.value;renderPage();});
+  if(isAdm&&$('cadd')) $('cadd').addEventListener('click',()=>openAddEv(null,null,sId));
+
+  pb.querySelectorAll('.cc').forEach(c=>{
+    c.addEventListener('click',()=>{
+      if(!isAdm) return;
+      const d=parseInt(c.dataset.d),eid=c.dataset.e;
+      const data=`${y}-${p2(m+1)}-${p2(d)}`;
+      if(eid){ const e=S.eventi.find(x=>x.id===eid); if(e) openDetailEv(e,sId); }
+      else openAddEv(data,c.dataset.cl==='1'?null:(c.dataset.u||null),sId);
+    });
+  });
+}
+
+/* ── Modal aggiungi evento ── */
+function openAddEv(data,uDefault,sedeId){
+  const utenti=S.utenti.filter(u=>u.sedi.includes(sedeId));
+  let tipo='ferie';
+  const body=`
+    <div class="fg"><div class="fl">Data</div><input class="fi" id="ed" type="date" value="${data||todayStr()}" style="font-family:monospace"/></div>
+    <div class="fg"><div class="fl">Tipo evento</div>
+      <div id="etb" style="display:flex;gap:7px;flex-wrap:wrap">
+        ${Object.entries(TIPO).map(([k,v])=>`<button class="btn bsm etb-btn" data-t="${k}" style="background:${k===tipo?'var(--navy)':'var(--g100)'};color:${k===tipo?'#fff':'var(--g700)'};border:1px solid ${k===tipo?'transparent':'var(--g200)'}">${v.e} ${v.l}</button>`).join('')}
+      </div>
+    </div>
+    <div class="fg" id="eu-fg"><div class="fl">Dipendente</div>
+      <select class="fse" id="eu">
+        ${utenti.map(u=>`<option value="${u.id}"${u.id===uDefault?' selected':''}>${esc(u.nome+' '+u.cognome)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="fg"><div class="fl">Durata</div>
+      <select class="fse" id="edr">
+        ${Object.entries(DURATA).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}
+      </select>
+    </div>
+    <div class="fg"><div class="fl">Note (opzionale)</div><textarea class="fta" id="en" placeholder="Es. Visita medica, ferie estive…"></textarea></div>`;
+  openM(`📅 Nuovo evento`,body,[
+    {l:'Annulla',c:'bs',a:closeM},
+    {l:'✅ Salva',c:'bp',a:async()=>{
+      const d=$('ed').value,t=tipo,dr=$('edr').value,n=$('en').value.trim();
+      const u=t==='chiusura'?null:($('eu').value||null);
+      if(!d){toast('Seleziona una data','err');return;}
+      if(t!=='chiusura'&&!u){toast('Seleziona un dipendente','err');return;}
+      try{
+        const [ev]=await db('POST',T('calendario'),{body:{data:d,tipo:t,utente_id:u,sede_id:sedeId,durata:dr,note:n,created_by:S.user.id}});
+        S.eventi.push(ev);
+        logAct('calendario_insert',`${TIPO[t]?.l||t}: ${d} — ${u?uNome(u):'Chiusura sede'}`);
+        closeM();renderPage();toast('Evento aggiunto ✅');
+      }catch(e){toast(e.message,'err');}
+    }},
+  ]);
+  const ref=()=>{
+    const isCl=tipo==='chiusura';
+    $('eu-fg').style.display=isCl?'none':'';
+    document.querySelectorAll('.etb-btn').forEach(b=>{
+      b.style.background=b.dataset.t===tipo?'var(--navy)':'var(--g100)';
+      b.style.color=b.dataset.t===tipo?'#fff':'var(--g700)';
+      b.style.borderColor=b.dataset.t===tipo?'transparent':'var(--g200)';
+    });
+  };
+  document.querySelectorAll('.etb-btn').forEach(b=>b.addEventListener('click',()=>{tipo=b.dataset.t;ref();}));
+  ref();
+}
+
+/* ── Modal dettaglio evento ── */
+function openDetailEv(ev,sedeId){
+  const isAdm=S.user?.ruolo==='admin'||S.user?.ruolo==='admin_sede';
+  const s=S.sedi.find(x=>x.id===ev.sede_id);
+  const body=`
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">${bTipo(ev.tipo)}<span style="font-size:12px;color:var(--g500)">${DURATA[ev.durata]||ev.durata}</span></div>
+      <div class="fg" style="margin:0"><div class="fl">Data</div><div style="font-size:15px;font-weight:700">${fmt(ev.data)}</div></div>
+      ${ev.utente_id?`<div class="fg" style="margin:0"><div class="fl">Dipendente</div><div style="font-size:14px;font-weight:600">${esc(uNome(ev.utente_id))}</div></div>`:''}
+      ${s?`<div class="fg" style="margin:0"><div class="fl">Sede</div>${sedeDot(s.id)}</div>`:''}
+      ${ev.note?`<div class="fg" style="margin:0"><div class="fl">Note</div><div style="font-size:13px;color:var(--g700);background:var(--g50);padding:8px 11px;border-radius:6px">${esc(ev.note)}</div></div>`:''}
+    </div>`;
+  const btns=[{l:'Chiudi',c:'bs',a:closeM}];
+  if(isAdm) btns.unshift({l:'🗑 Elimina',c:'bd',a:async()=>{
+    await db('DELETE',T('calendario'),{flt:`id=eq.${ev.id}`});
+    S.eventi=S.eventi.filter(e=>e.id!==ev.id);
+    logAct('calendario_delete',`Eliminato ${ev.tipo}: ${ev.data}`);
+    closeM();renderPage();toast('Evento eliminato');
+  }});
+  openM(`${TIPO[ev.tipo]?.e||''} Dettaglio evento`,body,btns);
+}
+
+/* ══════════════════════════════════════════
+   PAGINA SEDI
+══════════════════════════════════════════ */
+function renderSedi(pb){
+  pb.innerHTML=`<div class="fi-an"><div class="card">
+    <div class="ch"><span class="ct">🏢 Sedi (${S.sedi.length})</span><button class="btn bp bsm" id="sadd">+ Nuova sede</button></div>
+    ${!S.sedi.length?`<div class="emp"><div class="emi">🏢</div><div class="emt">Nessuna sede</div></div>`:
+    `<table class="dt"><thead><tr><th>Nome</th><th>Colore</th><th>Stato</th><th>Azioni</th></tr></thead><tbody>
+    ${S.sedi.map(s=>`<tr>
+      <td><div class="tn">${esc(s.nome)}</div>${s.descrizione?`<div class="ts">${esc(s.descrizione)}</div>`:''}</td>
+      <td><span style="display:inline-flex;align-items:center;gap:7px"><span style="width:20px;height:20px;border-radius:4px;background:${s.colore};display:inline-block"></span><code style="font-size:11px;color:var(--g500)">${s.colore}</code></span></td>
+      <td><span class="bg ${s.attiva?'bg-on':'bg-off'}">${s.attiva?'● Attiva':'○ Inattiva'}</span></td>
+      <td><div class="tda">
+        <button class="btn bs bsm" data-se="${s.id}">✏</button>
+        <button class="btn bd bsm" data-sd="${s.id}">🗑</button>
+      </div></td>
+    </tr>`).join('')}
+    </tbody></table>`}
+  </div></div>`;
+  $('sadd').addEventListener('click',()=>openSedeM(null));
+  pb.querySelectorAll('[data-se]').forEach(b=>b.addEventListener('click',()=>openSedeM(S.sedi.find(x=>x.id===b.dataset.se))));
+  pb.querySelectorAll('[data-sd]').forEach(b=>b.addEventListener('click',()=>{
+    const s=S.sedi.find(x=>x.id===b.dataset.sd);
+    openConf(`Eliminare la sede "${s?.nome}"? Tutti gli eventi associati verranno eliminati.`,async()=>{
+      await db('DELETE',T('sedi'),{flt:`id=eq.${b.dataset.sd}`});
+      S.sedi=S.sedi.filter(x=>x.id!==b.dataset.sd); renderPage(); toast('Sede eliminata');
+    });
+  }));
+}
+
+function openSedeM(sede){
+  let col=sede?.colore||'#2E6DA4';
+  const body=`
+    <div class="fg"><div class="fl">Nome sede *</div><input class="fi" id="sn" value="${esc(sede?.nome||'')}"/></div>
+    <div class="fg"><div class="fl">Descrizione</div><input class="fi" id="sd" value="${esc(sede?.descrizione||'')}"/></div>
+    <div class="fg"><div class="fl">Colore identificativo</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px">
+        <input type="color" id="sc" value="${col}" style="width:40px;height:34px;border:1.5px solid var(--g300);border-radius:6px;cursor:pointer;padding:2px"/>
+        ${SWATCHES.map(c=>`<span class="sw${c===col?' sel':''}" data-c="${c}" style="background:${c}"></span>`).join('')}
+      </div>
+    </div>`;
+  openM(sede?'✏ Modifica sede':'+ Nuova sede',body,[
+    {l:'Annulla',c:'bs',a:closeM},
+    {l:'Salva',c:'bp',a:async()=>{
+      const nome=$('sn').value.trim(),desc=$('sd').value.trim(),colore=$('sc').value;
+      if(!nome){toast('Nome obbligatorio','err');return;}
+      try{
+        if(sede){
+          await db('PATCH',T('sedi'),{flt:`id=eq.${sede.id}`,body:{nome,descrizione:desc,colore}});
+          S.sedi=S.sedi.map(s=>s.id===sede.id?{...s,nome,descrizione:desc,colore}:s);
+        }else{
+          const [ns]=await db('POST',T('sedi'),{body:{nome,descrizione:desc,colore,attiva:true}});
+          S.sedi.push(ns); logAct('sede_create',`Nuova sede: ${nome}`);
+        }
+        closeM();renderPage();toast(sede?'Sede aggiornata':'Sede aggiunta ✅');
+      }catch(e){toast(e.message,'err');}
+    }},
+  ]);
+  document.querySelectorAll('.sw').forEach(sw=>{
+    sw.addEventListener('click',()=>{
+      col=sw.dataset.c; $('sc').value=col;
+      document.querySelectorAll('.sw').forEach(x=>x.classList.toggle('sel',x.dataset.c===col));
+    });
+  });
+}
+
+/* ══════════════════════════════════════════
+   PAGINA UTENTI
+══════════════════════════════════════════ */
+function renderUtenti(pb){
+  const isAdm=S.user?.ruolo==='admin';
+  pb.innerHTML=`<div class="fi-an"><div class="card">
+    <div class="ch">
+      <span class="ct">👥 Utenti</span>
+      <div style="display:flex;gap:9px">
+        <input class="fi" id="usrch" style="width:200px;padding:6px 11px" placeholder="🔍 Cerca…"/>
+        ${isAdm?`<button class="btn bp bsm" id="uadd">+ Nuovo utente</button>`:''}
+      </div>
+    </div>
+    <table class="dt"><thead><tr><th>Utente</th><th>Ruolo</th><th>Sedi</th><th>Stato</th>${isAdm?'<th>Azioni</th>':''}</tr></thead>
+    <tbody id="utbody"></tbody></table>
+  </div></div>`;
+
+  const rr=q=>{
+    const fl=S.utenti.filter(u=>`${u.nome} ${u.cognome} ${u.email}`.toLowerCase().includes(q.toLowerCase()));
+    $('utbody').innerHTML=fl.map(u=>`<tr>
+      <td><div class="tn">${esc(u.nome+' '+u.cognome)}</div><div class="ts">${esc(u.email)}</div></td>
+      <td>${bRuolo(u.ruolo)}</td>
+      <td><div style="display:flex;gap:4px;flex-wrap:wrap">${(u.sedi||[]).map(sid=>sedeDot(sid)).join('')}</div></td>
+      <td><span class="bg ${u.attivo?'bg-on':'bg-off'}">${u.attivo?'● Attivo':'○ Inattivo'}</span></td>
+      ${isAdm?`<td><div class="tda">
+        <button class="btn bs bsm" data-eu="${u.id}">✏</button>
+        ${u.id!==S.user?.id?`<button class="btn bd bsm" data-du="${u.id}">🗑</button>`:''}
+      </div></td>`:''}
+    </tr>`).join('');
+    if(isAdm){
+      $('utbody').querySelectorAll('[data-eu]').forEach(b=>b.addEventListener('click',()=>openUtenteM(S.utenti.find(x=>x.id===b.dataset.eu))));
+      $('utbody').querySelectorAll('[data-du]').forEach(b=>b.addEventListener('click',()=>{
+        const u=S.utenti.find(x=>x.id===b.dataset.du);
+        openConf(`Eliminare "${u?.nome} ${u?.cognome}"?`,async()=>{
+          await db('DELETE',T('profili'),{flt:`id=eq.${b.dataset.du}`});
+          S.utenti=S.utenti.filter(x=>x.id!==b.dataset.du); rr($('usrch').value); toast('Utente eliminato');
+        });
+      }));
+    }
+  };
+  rr('');
+  $('usrch').addEventListener('input',e=>rr(e.target.value));
+  if(isAdm) $('uadd').addEventListener('click',()=>openUtenteM(null));
+}
+
+function openUtenteM(u){
+  let selS=u?.sedi||[];
+  const body=`
+    <div class="fr">
+      <div class="fg"><div class="fl">Nome *</div><input class="fi" id="un" value="${esc(u?.nome||'')}"/></div>
+      <div class="fg"><div class="fl">Cognome *</div><input class="fi" id="ucg" value="${esc(u?.cognome||'')}"/></div>
+    </div>
+    <div class="fg"><div class="fl">Email *</div><input class="fi" id="ue" type="email" value="${esc(u?.email||'')}"/></div>
+    ${!u?`<div class="fg"><div class="fl">Password *</div><input class="fi" id="upw" type="password" placeholder="Minimo 6 caratteri"/></div>`:''}
+    <div class="fg"><div class="fl">Ruolo</div>
+      <select class="fse" id="ur">
+        ${Object.entries(RUOLO).map(([k,v])=>`<option value="${k}"${u?.ruolo===k?' selected':''}>${v.l}</option>`).join('')}
+      </select></div>
+    <div class="fg"><div class="fl">Sedi associate</div>
+      <div class="fch" id="usg">
+        ${S.sedi.map(s=>`<label class="fci"><input type="checkbox" value="${s.id}"${selS.includes(s.id)?' checked':''}> ${sedeDot(s.id)}</label>`).join('')}
+      </div></div>
+    <div class="fg">
+      <label class="tw">
+        <div class="tg"><input type="checkbox" id="uat"${u?.attivo!==false?' checked':''}><span class="ts2"></span></div>
+        <span class="fl" style="margin:0">Utente attivo</span>
+      </label></div>`;
+  openM(u?'✏ Modifica utente':'+ Nuovo utente',body,[
+    {l:'Annulla',c:'bs',a:closeM},
+    {l:'Salva',c:'bp',a:async()=>{
+      const nome=$('un').value.trim(),cog=$('ucg').value.trim(),email=$('ue').value.trim();
+      const ruolo=$('ur').value,attivo=$('uat').checked;
+      const sediSel=[...$('usg').querySelectorAll('input:checked')].map(x=>x.value);
+      if(!nome||!cog||!email){toast('Compila tutti i campi obbligatori','err');return;}
+      try{
+        if(u){
+          await db('PATCH',T('profili'),{flt:`id=eq.${u.id}`,body:{nome,cognome:cog,email,ruolo,attivo}});
+          await db('DELETE',T('utenti_sedi'),{flt:`utente_id=eq.${u.id}`});
+          if(sediSel.length) await db('POST',T('utenti_sedi'),{body:sediSel.map(sid=>({utente_id:u.id,sede_id:sid}))});
+          S.utenti=S.utenti.map(x=>x.id===u.id?{...x,nome,cognome:cog,email,ruolo,attivo,sedi:sediSel}:x);
+        }else{
+          const pwd=$('upw')?.value||'';
+          if(pwd.length<6){toast('Password minimo 6 caratteri','err');return;}
+          // Nota: in produzione creare l'auth user via Edge Function col service_role key.
+          // Qui inseriamo solo il profilo (per demo o se l'utente è già stato creato su Supabase Auth).
+          const nid=uid();
+          await db('POST',T('profili'),{body:{id:nid,nome,cognome:cog,email,ruolo,attivo}});
+          if(sediSel.length) await db('POST',T('utenti_sedi'),{body:sediSel.map(sid=>({utente_id:nid,sede_id:sid}))});
+          S.utenti.push({id:nid,nome,cognome:cog,email,ruolo,attivo,sedi:sediSel});
+          logAct('utente_create',`Nuovo utente: ${nome} ${cog}`);
+        }
+        closeM();renderPage();toast(u?'Utente aggiornato':'Utente aggiunto ✅');
+      }catch(e){toast(e.message,'err');}
+    }},
+  ]);
+}
+
+/* ══════════════════════════════════════════
+   PAGINA EMAIL
+══════════════════════════════════════════ */
+function renderEmail(pb){
+  const today=new Date();
+  pb.innerHTML=`<div class="fi-an">
+    <div class="alert ai" style="margin-bottom:18px">📧 Email inviate tramite <strong>Resend</strong> via Supabase Edge Function schedulata ogni ora. Configura <code style="font-family:monospace;font-size:12px">RESEND_API_KEY</code> nelle impostazioni Supabase.</div>
+    <div class="card">
+      <div class="ch"><span class="ct">📧 Configurazioni email (${S.mailCfg.length})</span><button class="btn bp bsm" id="madd">+ Nuova configurazione</button></div>
+      ${!S.mailCfg.length?`<div class="emp"><div class="emi">📧</div><div class="emt">Nessuna configurazione</div><div class="ems">Aggiungi per inviare riepiloghi automatici agli admin</div></div>`:
+      S.mailCfg.map(c=>{
+        const adm=S.utenti.find(u=>u.id===c.admin_id);
+        const dF=addDays(c.range_da),dT=addDays(c.range_a);
+        const gd=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+        return `<div class="mailc" data-mid="${c.id}">
+          <div class="mch">
+            <div><div style="font-weight:700;font-size:14px">📧 ${esc(c.email_destinatario)}</div>
+              <div style="font-size:12px;color:var(--g500);margin-top:2px">Admin: ${adm?esc(adm.nome+' '+adm.cognome):'—'}</div></div>
+            <div style="display:flex;gap:10px;align-items:center">
+              <label class="tw">
+                <div class="tg"><input type="checkbox" class="mtog" data-id="${c.id}"${c.attiva?' checked':''}><span class="ts2"></span></div>
+                <span style="font-size:12px;font-weight:600;color:${c.attiva?'var(--green)':'var(--g500)'}">${c.attiva?'Attiva':'Inattiva'}</span>
+              </label>
+              <button class="btn bs bsm" data-me="${c.id}">✏</button>
+              <button class="btn bd bsm" data-md="${c.id}">🗑</button>
+            </div>
+          </div>
+          <div class="mcb">
+            <div><div class="mfl">Frequenza</div><div class="mfv">${c.frequenza==='giornaliera'?'📅 Giornaliera':`📅 Settimanale (${gd[c.giorno_settimana||1]})`}</div></div>
+            <div><div class="mfl">Orario</div><div class="mfv">🕐 ${c.orario}</div></div>
+            <div><div class="mfl">Range giorni</div><div class="mfv" style="font-family:monospace;font-size:12px">${c.range_da>=0?'+':''}${c.range_da} → +${c.range_a} da oggi</div></div>
+            <div><div class="mfl">Ultimo invio</div><div class="mfv">${c.ultimo_invio?fmtDt(c.ultimo_invio):'—'}</div></div>
+          </div>
+          <div class="mprev">💡 Riepilogo di oggi includerà: <strong>${fmt(dF)}</strong> → <strong>${fmt(dT)}</strong></div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+  $('madd').addEventListener('click',()=>openMailM(null));
+  pb.querySelectorAll('[data-me]').forEach(b=>b.addEventListener('click',()=>openMailM(S.mailCfg.find(c=>c.id===b.dataset.me))));
+  pb.querySelectorAll('[data-md]').forEach(b=>b.addEventListener('click',()=>{
+    const c=S.mailCfg.find(x=>x.id===b.dataset.md);
+    openConf(`Eliminare la configurazione per "${c?.email_destinatario}"?`,async()=>{
+      await db('DELETE',T('mail_config'),{flt:`id=eq.${b.dataset.md}`});
+      S.mailCfg=S.mailCfg.filter(x=>x.id!==b.dataset.md); renderPage(); toast('Configurazione eliminata');
+    });
+  }));
+  pb.querySelectorAll('.mtog').forEach(t=>t.addEventListener('change',async e=>{
+    const id=e.target.dataset.id, val=e.target.checked;
+    await db('PATCH',T('mail_config'),{flt:`id=eq.${id}`,body:{attiva:val}});
+    S.mailCfg=S.mailCfg.map(c=>c.id===id?{...c,attiva:val}:c);
+    toast(val?'Email attivata':'Email disattivata'); renderPage();
+  }));
+}
+
+function openMailM(conf){
+  const gd=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const body=`
+    <div class="fg"><div class="fl">Email destinatario *</div><input class="fi" id="me" type="email" value="${esc(conf?.email_destinatario||S.user?.email||'')}"/></div>
+    <div class="fr">
+      <div class="fg"><div class="fl">Frequenza</div>
+        <select class="fse" id="mf">
+          <option value="giornaliera"${!conf||conf.frequenza==='giornaliera'?' selected':''}>Giornaliera</option>
+          <option value="settimanale"${conf?.frequenza==='settimanale'?' selected':''}>Settimanale</option>
+        </select></div>
+      <div class="fg"><div class="fl">Orario invio</div><input class="fi" id="mo" type="time" value="${conf?.orario||'08:00'}"/></div>
+    </div>
+    <div class="fg" id="mgd" style="${conf?.frequenza==='settimanale'?'':'display:none'}"><div class="fl">Giorno settimana</div>
+      <select class="fse" id="mw">${gd.map((g,i)=>`<option value="${i}"${(conf?.giorno_settimana||1)===i?' selected':''}>${g}</option>`).join('')}</select></div>
+    <div class="fr">
+      <div class="fg"><div class="fl">Range da (es. -1=ieri, 0=oggi)</div><input class="fi" id="mrd" type="number" value="${conf?.range_da??-1}"/></div>
+      <div class="fg"><div class="fl">Range a (es. 7=tra 7 giorni)</div><input class="fi" id="mra" type="number" value="${conf?.range_a??7}"/></div>
+    </div>
+    <div class="alert ai" id="mprev" style="font-size:12px"></div>`;
+  openM(conf?'✏ Modifica configurazione':'+ Nuova configurazione email',body,[
+    {l:'Annulla',c:'bs',a:closeM},
+    {l:'Salva',c:'bp',a:async()=>{
+      const em=$('me').value.trim(),fr=$('mf').value,or=$('mo').value,dw=parseInt($('mw').value),rd=parseInt($('mrd').value),ra=parseInt($('mra').value);
+      if(!em){toast('Inserisci un indirizzo email','err');return;}
+      try{
+        const pl={email_destinatario:em,frequenza:fr,orario:or,giorno_settimana:dw,range_da:rd,range_a:ra,attiva:true,admin_id:S.user.id};
+        if(conf){
+          await db('PATCH',T('mail_config'),{flt:`id=eq.${conf.id}`,body:pl});
+          S.mailCfg=S.mailCfg.map(c=>c.id===conf.id?{...c,...pl}:c);
+        }else{
+          const [nc]=await db('POST',T('mail_config'),{body:pl}); S.mailCfg.push(nc);
+        }
+        closeM();renderPage();toast(conf?'Configurazione aggiornata':'Configurazione aggiunta ✅');
+      }catch(e){toast(e.message,'err');}
+    }},
+  ]);
+  const upd=()=>{
+    const rd=parseInt($('mrd')?.value??-1),ra=parseInt($('mra')?.value??7);
+    const el=$('mprev');
+    if(el) el.textContent=`💡 L'email di oggi includerà i giorni dal ${fmt(addDays(rd))} al ${fmt(addDays(ra))}`;
+    if($('mgd')) $('mgd').style.display=$('mf')?.value==='settimanale'?'':'none';
+  };
+  setTimeout(()=>{ $('mf')?.addEventListener('change',upd); $('mrd')?.addEventListener('input',upd); $('mra')?.addEventListener('input',upd); upd(); },50);
+}
+
+/* ══════════════════════════════════════════
+   PAGINA LOG
+══════════════════════════════════════════ */
+function renderLog(pb){
+  pb.innerHTML=`<div class="fi-an"><div class="card">
+    <div class="ch"><span class="ct">📋 Log accessi e modifiche</span><span style="font-size:12px;color:var(--g500)">${S.log.length} eventi</span></div>
+    <div class="cb">
+      ${!S.log.length?`<div class="emp"><div class="emi">📋</div><div class="emt">Nessun evento registrato</div></div>`:
+      S.log.map(l=>`<div class="logr">
+        <div class="lic">${LOG_IC[l.azione]||'📌'}</div>
+        <div>
+          <div class="lt">${fmtDt(l.created_at)}</div>
+          <div class="lx">${l.utente_id?`<span class="lw">${esc(uNome(l.utente_id))}</span> — `:''}${esc(String(l.dettaglio||l.azione||''))}</div>
+        </div>
+      </div>`).join('')}
+    </div>
+  </div></div>`;
+}
+
+/* ══════════════════════════════════════════
+   MODAL SISTEMA
+══════════════════════════════════════════ */
+function openM(title, body, btns=[]){
+  $('mtit').textContent=title;
+  $('mbdy').innerHTML=body;
+  $('mft').innerHTML=btns.map((b,i)=>`<button class="btn ${b.c}" id="mb${i}">${b.l}</button>`).join('');
+  btns.forEach((b,i)=>$(`mb${i}`).addEventListener('click',b.a));
+  $('mov').classList.remove('hid');
+}
+function closeM(){ $('mov').classList.add('hid'); }
+function openConf(msg,onOk){
+  openM('⚠ Conferma',`<p style="color:var(--g700);font-size:13.5px;line-height:1.6">${esc(msg)}</p>`,[
+    {l:'Annulla',c:'bs',a:closeM},
+    {l:'Conferma',c:'bd',a:async()=>{ await onOk(); closeM(); }},
+  ]);
+}
+$('mcls').addEventListener('click',closeM);
+$('mov').addEventListener('click',e=>{ if(e.target===$('mov')) closeM(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeM(); });
+
+/* ══════════════════════════════════════════
+   LOGIN / LOGOUT
+══════════════════════════════════════════ */
+async function doLogin(){
+  const email=$('lem').value.trim(), pwd=$('lpw').value;
+  const btn=$('lbtn'), err=$('lerr');
+  err.classList.add('hid');
+  btn.innerHTML='<span class="spn"></span> Accesso…'; btn.disabled=true;
+  try{
+    const auth=await supaLogin(email,pwd);
+    S.token=auth.access_token;
+    const [profilo]=await db('GET',T('profili'),{flt:`id=eq.${auth.user.id}`});
+    if(!profilo) throw new Error('Profilo non trovato. Contatta l\'amministratore.');
+    S.user=profilo;
+    await loadAll();
+    $('lp').classList.add('hid'); $('app').classList.remove('hid');
+    $('tbd').textContent=`📅 ${fmt(new Date())}`;
+    renderSidebar(); goPage('calendario');
+    logAct('login','Accesso effettuato');
+    toast(`Benvenuto, ${S.user.nome}! ✅`);
+  }catch(e){
+    err.innerHTML=`⚠ ${esc(e.message)}`;
+    err.classList.remove('hid');
+    btn.innerHTML='🔐 Accedi'; btn.disabled=false;
+  }
+}
+
+async function doLogout(){
+  await supaLogout();
+  S.user=null; S.token=null;
+  $('app').classList.add('hid'); $('lp').classList.remove('hid'); $('lpw').value='';
+}
+
+$('lbtn').addEventListener('click',doLogin);
+$('lem').addEventListener('keydown',e=>{ if(e.key==='Enter') $('lpw').focus(); });
+$('lpw').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+$('lout').addEventListener('click',()=>openConf('Uscire dall\'applicazione?',doLogout));
+
+$('lem').focus();
+</script>
+</body>
+</html>
