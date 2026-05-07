@@ -407,6 +407,8 @@ async function loadAll(){
 
 async function loadEventi(){
   const y=S.cal.y,m=S.cal.m;
+  // Carichiamo TUTTI gli eventi del mese (senza filtro sede)
+  // così ferie/permesso/malattia appaiono su tutte le sedi dell'utente
   S.eventi=await db('GET',T('calendario'),{
     flt:`data=gte.${y}-${p2(m+1)}-01&data=lte.${y}-${p2(m+1)}-${dim(y,m)}`,ord:'data.asc'
   })||[];
@@ -466,9 +468,19 @@ function renderCal(pb){
   const sede=S.sedi.find(s=>s.id===sid)||S.sedi[0];
   const sId=sede?.id;
   const pfx=`${y}-${p2(m+1)}-`;
-  const ev=S.eventi.filter(e=>e.data.startsWith(pfx)&&e.sede_id===sId);
-  const eMap={}; ev.forEach(e=>{ const d=parseInt(e.data.slice(8,10)); if(!eMap[d])eMap[d]=[]; eMap[d].push(e); });
-  const closed=new Set(ev.filter(e=>e.tipo==='chiusura').map(e=>parseInt(e.data.slice(8,10))));
+  // eventi sede (chiusura/nota senza utente) filtrati per sede corrente
+  const evSede=S.eventi.filter(e=>e.data.startsWith(pfx)&&e.sede_id===sId&&!e.utente_id);
+  // eventi utente (ferie/permesso/malattia/nota con utente) filtrati per utenti della sede
+  const utentiIdSede=new Set(utenti.map(u=>u.id));
+  const evUtenti=S.eventi.filter(e=>e.data.startsWith(pfx)&&e.utente_id&&utentiIdSede.has(e.utente_id));
+  const ev=[...evSede,...evUtenti];
+  const eMap={};
+  ev.forEach(e=>{
+    const d=parseInt(e.data.slice(8,10));
+    if(!eMap[d])eMap[d]=[];
+    eMap[d].push(e);
+  });
+  const closed=new Set(evSede.filter(e=>e.tipo==='chiusura').map(e=>parseInt(e.data.slice(8,10))));
   const utenti=S.utenti.filter(u=>u.sedi.includes(sId));
   const rows=[{id:'__c__',cl:true,lbl:'SEDE'},...utenti.map(u=>({...u,lbl:`${u.cognome} ${u.nome}`}))];
 
@@ -513,11 +525,12 @@ function renderCal(pb){
     return `<tr class="${row.cl?'crow-cl':''}"><td class="chn">${esc(row.lbl)}</td>${cells}</tr>`;
   }).join('');
 
-  const fN=ev.filter(e=>e.tipo==='ferie').length;
-  const pN=ev.filter(e=>e.tipo==='permesso').length;
-  const cN=ev.filter(e=>e.tipo==='chiusura').length;
-  const mN=ev.filter(e=>e.tipo==='malattia').length;
-  const nN=ev.filter(e=>e.tipo==='nota').length;
+  const allEv=[...evSede,...evUtenti];
+  const fN=allEv.filter(e=>e.tipo==='ferie').length;
+  const pN=allEv.filter(e=>e.tipo==='permesso').length;
+  const cN=allEv.filter(e=>e.tipo==='chiusura').length;
+  const mN=allEv.filter(e=>e.tipo==='malattia').length;
+  const nN=allEv.filter(e=>e.tipo==='nota').length;
 
   pb.innerHTML=`<div class="fi-an">
     <div class="sg">
@@ -543,7 +556,13 @@ function renderCal(pb){
         ${isAdm?`<button class="btn bp-green bsm" id="cadd">+ Aggiungi</button>`:''}
       </div>
       <div class="cleg">
-        ${Object.entries(TIPO).map(([k,v])=>`<span class="bg bg${k[0]}">${v.e} ${v.l}</span>`).join('')}
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd dF" style="width:16px;height:16px;font-size:8px;flex-shrink:0">F</span>Ferie</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd dFm" style="width:16px;height:16px;font-size:8px;flex-shrink:0">F</span>Ferie ½</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd dP" style="width:16px;height:16px;font-size:8px;flex-shrink:0">P</span>Permesso</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd dPm" style="width:16px;height:16px;font-size:8px;flex-shrink:0">P</span>Permesso ½</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd dM" style="width:16px;height:16px;font-size:8px;flex-shrink:0">M</span>Malattia</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd dC" style="width:16px;height:16px;font-size:9px;flex-shrink:0;border-radius:2px">✕</span>Chiusura</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd dN" style="width:16px;height:16px;font-size:8px;flex-shrink:0">N</span>Nota</span>
         <span class="clh">${isAdm?'💡 Clicca su una cella per aggiungere/vedere eventi':'👁 Solo visualizzazione'}</span>
       </div>
       <div class="cscr">
@@ -701,7 +720,7 @@ function openDetailEv(ev,sedeId){
 ══════════════════════════════════════════ */
 function renderSedi(pb){
   pb.innerHTML=`<div class="fi-an"><div class="card">
-    <div class="ch"><span class="ct">🏢 Sedi (${S.sedi.length})</span><button class="btn bp bsm" id="sadd">+ Nuova sede</button></div>
+    <div class="ch"><span class="ct">🏢 Sedi (${S.sedi.length})</span><button class="btn bp-green bsm" id="sadd">+ Nuova sede</button></div>
     ${!S.sedi.length?`<div class="emp"><div class="emi">🏢</div><div class="emt">Nessuna sede</div></div>`:
     `<table class="dt"><thead><tr><th>Nome</th><th>Colore</th><th>Stato</th><th>Azioni</th></tr></thead><tbody>
     ${S.sedi.map(s=>`<tr>
@@ -772,7 +791,7 @@ function renderUtenti(pb){
       <span class="ct">👥 Utenti</span>
       <div style="display:flex;gap:9px">
         <input class="fi" id="usrch" style="width:200px;padding:6px 11px" placeholder="🔍 Cerca…"/>
-        ${isAdm?`<button class="btn bp bsm" id="uadd">+ Nuovo utente</button>`:''}
+        ${isAdm?`<button class="btn bp-green bsm" id="uadd">+ Nuovo utente</button>`:''}
       </div>
     </div>
     <table class="dt"><thead><tr><th>Utente</th><th>Ruolo</th><th>Sedi</th><th>Stato</th>${isAdm?'<th>Azioni</th>':''}</tr></thead>
@@ -871,7 +890,7 @@ function renderEmail(pb){
   pb.innerHTML=`<div class="fi-an">
     <div class="alert ai" style="margin-bottom:18px">📧 Email inviate tramite <strong>Resend</strong> via Supabase Edge Function schedulata ogni ora. Configura <code style="font-family:monospace;font-size:12px">RESEND_API_KEY</code> nelle impostazioni Supabase.</div>
     <div class="card">
-      <div class="ch"><span class="ct">📧 Configurazioni email (${S.mailCfg.length})</span><button class="btn bp bsm" id="madd">+ Nuova configurazione</button></div>
+      <div class="ch"><span class="ct">📧 Configurazioni email (${S.mailCfg.length})</span><button class="btn bp-green bsm" id="madd">+ Nuova configurazione</button></div>
       ${!S.mailCfg.length?`<div class="emp"><div class="emi">📧</div><div class="emt">Nessuna configurazione</div><div class="ems">Aggiungi per inviare riepiloghi automatici agli admin</div></div>`:
       S.mailCfg.map(c=>{
         const adm=S.utenti.find(u=>u.id===c.admin_id);
@@ -967,19 +986,60 @@ function openMailM(conf){
    PAGINA LOG
 ══════════════════════════════════════════ */
 function renderLog(pb){
+  let logPage=0, logQ='';
+  const PAGE=10;
+
+  const render=()=>{
+    const fl=S.log.filter(l=>{
+      if(!logQ) return true;
+      const q=logQ.toLowerCase();
+      return (l.azione||'').toLowerCase().includes(q)
+        ||(String(l.dettaglio||'')).toLowerCase().includes(q)
+        ||(uNome(l.utente_id)||'').toLowerCase().includes(q)
+        ||fmtDt(l.created_at).includes(q);
+    });
+    const tot=fl.length, pages=Math.max(1,Math.ceil(tot/PAGE));
+    if(logPage>=pages) logPage=pages-1;
+    const slice=fl.slice(logPage*PAGE,(logPage+1)*PAGE);
+
+    $('log-count').textContent=`${tot} eventi`;
+    $('log-entries').innerHTML=!slice.length
+      ?`<div class="emp"><div class="emi">📋</div><div class="emt">Nessun risultato</div></div>`
+      :slice.map(l=>`<div class="logr">
+          <div class="lic">${LOG_IC[l.azione]||'📌'}</div>
+          <div>
+            <div class="lt">${fmtDt(l.created_at)}</div>
+            <div class="lx">${l.utente_id?`<span class="lw">${esc(uNome(l.utente_id))}</span> — `:''}${esc(String(l.dettaglio||l.azione||''))}</div>
+          </div>
+        </div>`).join('');
+
+    // paginazione
+    $('log-pag').innerHTML=pages<=1?'':
+      `<div style="display:flex;align-items:center;gap:8px;margin-top:14px;justify-content:center">
+        <button class="bic" id="log-prev" ${logPage===0?'disabled style="opacity:.4"':''}>◀</button>
+        <span style="font-size:13px;color:var(--g500)">${logPage+1} / ${pages}</span>
+        <button class="bic" id="log-next" ${logPage>=pages-1?'disabled style="opacity:.4"':''}>▶</button>
+      </div>`;
+    $('log-prev')?.addEventListener('click',()=>{logPage--;render();});
+    $('log-next')?.addEventListener('click',()=>{logPage++;render();});
+  };
+
   pb.innerHTML=`<div class="fi-an"><div class="card">
-    <div class="ch"><span class="ct">📋 Log accessi e modifiche</span><span style="font-size:12px;color:var(--g500)">${S.log.length} eventi</span></div>
+    <div class="ch">
+      <span class="ct">📋 Log accessi e modifiche</span>
+      <div style="display:flex;gap:9px;align-items:center">
+        <span id="log-count" style="font-size:12px;color:var(--g500)"></span>
+        <input class="fi" id="log-search" style="width:220px;padding:6px 11px" placeholder="🔍 Cerca…"/>
+      </div>
+    </div>
     <div class="cb">
-      ${!S.log.length?`<div class="emp"><div class="emi">📋</div><div class="emt">Nessun evento registrato</div></div>`:
-      S.log.map(l=>`<div class="logr">
-        <div class="lic">${LOG_IC[l.azione]||'📌'}</div>
-        <div>
-          <div class="lt">${fmtDt(l.created_at)}</div>
-          <div class="lx">${l.utente_id?`<span class="lw">${esc(uNome(l.utente_id))}</span> — `:''}${esc(String(l.dettaglio||l.azione||''))}</div>
-        </div>
-      </div>`).join('')}
+      <div id="log-entries"></div>
+      <div id="log-pag"></div>
     </div>
   </div></div>`;
+
+  render();
+  $('log-search').addEventListener('input',e=>{logQ=e.target.value;logPage=0;render();});
 }
 
 /* ══════════════════════════════════════════
