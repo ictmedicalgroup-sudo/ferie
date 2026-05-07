@@ -230,8 +230,10 @@ input:checked+.ts2::after{transform:translateX(16px)}
    CONFIG — inserire URL e chiave Supabase
 ══════════════════════════════════════════ */
 const CFG = {
-  URL: 'https://iczsdqcnvauopwkuspti.supabase.co',
-  KEY: 'sb_publishable_vijGmY6ZHzPiJ0XhGSLgug_Hqpzym5V',   // chiave anon/public
+  URL: 'https://TUOPROGETTOSUPABASE.supabase.co',  // ← es. https://abcdefgh.supabase.co
+  KEY: 'TUA_ANON_KEY',   // ← chiave anon/public (Settings → API → anon public)
+  // URL base delle Edge Functions (uguale al progetto, non cambiare il path)
+  FN:  'https://TUOPROGETTOSUPABASE.supabase.co/functions/v1',
 };
 const T = n => `ferie_${n}`;   // prefisso tabelle
 
@@ -739,12 +741,15 @@ function openUtenteM(u){
         }else{
           const pwd=$('upw')?.value||'';
           if(pwd.length<6){toast('Password minimo 6 caratteri','err');return;}
-          // Nota: in produzione creare l'auth user via Edge Function col service_role key.
-          // Qui inseriamo solo il profilo (per demo o se l'utente è già stato creato su Supabase Auth).
-          const nid=uid();
-          await db('POST',T('profili'),{body:{id:nid,nome,cognome:cog,email,ruolo,attivo}});
-          if(sediSel.length) await db('POST',T('utenti_sedi'),{body:sediSel.map(sid=>({utente_id:nid,sede_id:sid}))});
-          S.utenti.push({id:nid,nome,cognome:cog,email,ruolo,attivo,sedi:sediSel});
+          // Chiama la Edge Function ferie-create-user (usa service_role internamente)
+          const res=await fetch(`${CFG.FN}/ferie-create-user`,{
+            method:'POST',
+            headers:{'Authorization':`Bearer ${S.token}`,'Content-Type':'application/json'},
+            body:JSON.stringify({email,password:pwd,nome,cognome:cog,ruolo,sedi:sediSel}),
+          });
+          const data=await res.json();
+          if(!data.ok) throw new Error(data.error||'Errore creazione utente');
+          S.utenti.push({id:data.user_id,nome,cognome:cog,email,ruolo,attivo:true,sedi:sediSel});
           logAct('utente_create',`Nuovo utente: ${nome} ${cog}`);
         }
         closeM();renderPage();toast(u?'Utente aggiornato':'Utente aggiunto ✅');
