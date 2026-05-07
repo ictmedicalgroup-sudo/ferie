@@ -9,14 +9,15 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --navy:#1A3A5C;--blue:#2E6DA4;--blue-mid:#3D85C8;--blue-light:#D6E4F0;--blue-xlight:#EBF4FC;
-  --accent:#E8A838;--accent-light:#FEF3DC;
-  --red:#C0392B;--red-light:#FDECEA;--green:#27AE60;--green-light:#E8F8EF;
+  /* Colori aziendali Medical Group */
+  --navy:#4A4C4D;--blue:#77797a;--blue-mid:#9DBF60;--blue-light:#D5E3B7;--blue-xlight:#EEF5E3;
+  --accent:#9DBF60;--accent-light:#EEF5E3;
+  --red:#C0392B;--red-light:#FDECEA;--green:#9DBF60;--green-light:#EEF5E3;
   --purple:#8E44AD;--purple-light:#F4EAF9;
-  --g50:#F8F9FC;--g100:#F0F2F7;--g200:#E2E6EF;--g300:#C8D0E0;
-  --g500:#7A8399;--g700:#3D4560;--g900:#1A1F35;
-  --sh-sm:0 1px 3px rgba(26,58,92,.08),0 1px 2px rgba(26,58,92,.05);
-  --sh-md:0 4px 12px rgba(26,58,92,.10);--sh-lg:0 12px 32px rgba(26,58,92,.14),0 4px 10px rgba(26,58,92,.07);
+  --g50:#F8F9F8;--g100:#F0F2EE;--g200:#E2E6DF;--g300:#C8CEC4;
+  --g500:#77797a;--g700:#4A4C4D;--g900:#2A2C2D;
+  --sh-sm:0 1px 3px rgba(74,76,77,.08),0 1px 2px rgba(74,76,77,.05);
+  --sh-md:0 4px 12px rgba(74,76,77,.10);--sh-lg:0 12px 32px rgba(74,76,77,.14),0 4px 10px rgba(74,76,77,.07);
   --r:10px;--rsm:6px;--rlg:16px;
   font-family:'Raleway',sans-serif;
 }
@@ -36,7 +37,7 @@ body{background:var(--g50);color:var(--g900);min-height:100vh;font-size:14px}
 .sb-sec{font-size:9px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:rgba(255,255,255,.28);padding:10px 8px 4px}
 .nb{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:var(--rsm);color:rgba(255,255,255,.58);font-size:13px;font-weight:500;font-family:'Raleway',sans-serif;cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:all .17s}
 .nb:hover{background:rgba(255,255,255,.08);color:#fff}
-.nb.active{background:rgba(46,109,164,.55);color:#fff}
+.nb.active{background:rgba(157,191,96,.35);color:#fff}
 .nb-ic{font-size:15px;width:18px;text-align:center}
 .sb-foot{padding:14px 10px;border-top:1px solid rgba(255,255,255,.1)}
 .sb-un{font-size:13px;font-weight:600;color:rgba(255,255,255,.75);margin-bottom:3px}
@@ -65,9 +66,10 @@ body{background:var(--g50);color:var(--g900);min-height:100vh;font-size:14px}
 
 /* ── Badges ── */
 .bg{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
-.bgf{background:var(--blue-light);color:var(--navy)}.bgp{background:var(--accent-light);color:#7D5A00}
+.bgf{background:var(--g200);color:var(--g700)}.bgp{background:var(--blue-light);color:#4A6B20}
 .bgc{background:var(--red-light);color:var(--red)}.bgm{background:var(--purple-light);color:var(--purple)}
-.bga{background:var(--navy);color:#fff}.bgas{background:var(--blue-light);color:var(--navy)}.bgu{background:var(--g100);color:var(--g700)}
+.bgn{background:#FEF3DC;color:#7D5A00}
+.bga{background:var(--navy);color:#fff}.bgas{background:var(--g200);color:var(--g700)}.bgu{background:var(--g100);color:var(--g500)}
 .bg-on{background:var(--green-light);color:#1A7A40}.bg-off{background:var(--g100);color:var(--g500)}
 
 /* ── Stats ── */
@@ -100,8 +102,11 @@ body{background:var(--g50);color:var(--g900);min-height:100vh;font-size:14px}
 .cc:hover{background:var(--blue-xlight)!important}
 .cc.we{background:rgba(240,242,247,.55)}.cc.td0{background:rgba(46,109,164,.05)}.cc.cld{background:rgba(192,57,43,.07)}
 .cd{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0}
-.dF{background:var(--blue);color:#fff}.dFm{background:var(--blue-mid);color:#fff}.dFp{background:var(--blue-light);color:var(--navy)}
-.dP{background:var(--accent);color:#fff}.dC{background:var(--red);color:#fff;border-radius:3px;width:100%;height:100%;font-size:11px}.dM{background:var(--purple);color:#fff}
+.dF{background:#77797a;color:#fff}.dFm{background:#a8a9aa;color:#fff}.dFp{background:#D5E3B7;color:#4A4C4D}
+.dP{background:#9DBF60;color:#fff}.dPm{background:#b8d280;color:#fff}.dPp{background:#D5E3B7;color:#4A4C4D}
+.dC{background:var(--red);color:#fff;border-radius:3px;width:100%;height:100%;font-size:11px}
+.dM{background:#8E44AD;color:#fff}.dMm{background:#b07cc6;color:#fff}.dMp{background:#e8d5f5;color:#8E44AD}
+.dN{background:#E8A838;color:#fff}
 
 /* ── Tables ── */
 .dt{width:100%;border-collapse:collapse;font-size:13px}
@@ -169,7 +174,7 @@ input:checked+.ts2::after{transform:translateX(16px)}
 .fi-an{animation:fian .25s ease}@keyframes fian{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 /* ── Login ── */
-#lp{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy) 0%,#0D2240 55%,#162E50 100%);position:relative;overflow:hidden}
+#lp{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#2A2C2D 0%,#4A4C4D 55%,#77797a 100%);position:relative;overflow:hidden}
 .lbg{position:absolute;border-radius:50%;opacity:.06;pointer-events:none}
 .lcard{background:#fff;border-radius:var(--rlg);padding:38px;width:100%;max-width:390px;box-shadow:var(--sh-lg);position:relative;z-index:1}
 .llogo{text-align:center;margin-bottom:26px}
@@ -187,9 +192,16 @@ input:checked+.ts2::after{transform:translateX(16px)}
   <div class="lbg" style="width:320px;height:320px;bottom:-80px;left:40px;background:var(--blue-mid)"></div>
   <div class="lcard">
     <div class="llogo">
-      <div class="lic2">📅</div>
-      <div class="ltag">Sistema di gestione</div>
-      <div class="lttl">Gestione Ferie</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px">
+        <div style="width:32px;height:32px;border-radius:50%;border:2px solid var(--g300);display:flex;align-items:center;justify-content:center">
+          <div style="width:10px;height:10px;border-radius:50%;background:var(--g300)"></div>
+        </div>
+        <div style="text-align:left">
+          <div style="font-size:13px;font-weight:800;letter-spacing:3px;color:var(--g700);text-transform:uppercase">MEDICAL<span style="font-weight:300">GROUP</span></div>
+          <div style="font-size:8px;font-weight:600;letter-spacing:2px;color:var(--g500);text-transform:uppercase;margin-top:1px">GESTIONE FERIE</div>
+        </div>
+      </div>
+      <div style="height:1px;background:var(--g200);margin:14px 0"></div>
     </div>
     <div id="lerr" class="alert ae hid" style="margin-bottom:14px"></div>
     <div class="fg"><label class="fl">Email</label><input class="fi" id="lem" type="email" placeholder="utente@clinica.it" autocomplete="username"/></div>
@@ -201,7 +213,17 @@ input:checked+.ts2::after{transform:translateX(16px)}
 <!-- APP -->
 <div id="app" class="hid">
   <aside id="sidebar">
-    <div class="sb-logo"><div class="sb-icon">📅</div><div class="sb-tag">Sistema</div><div class="sb-title">Gestione Ferie</div></div>
+    <div class="sb-logo">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+        <div style="width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.5)"></div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:800;letter-spacing:2.5px;color:rgba(255,255,255,.9);text-transform:uppercase">MEDICAL<span style="font-weight:300">GROUP</span></div>
+          <div style="font-size:7px;font-weight:600;letter-spacing:1.8px;color:rgba(255,255,255,.45);text-transform:uppercase;margin-top:1px">GESTIONE FERIE</div>
+        </div>
+      </div>
+    </div>
     <nav class="sb-nav" id="sbnav"></nav>
     <div class="sb-foot">
       <div class="sb-un" id="sbun">—</div>
@@ -252,7 +274,7 @@ const S = {
 ══════════════════════════════════════════ */
 const MESI   = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const GIORNI = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-const TIPO = { ferie:{l:'Ferie',e:'🌴'}, permesso:{l:'Permesso',e:'⏰'}, chiusura:{l:'Chiusura',e:'🔒'}, malattia:{l:'Malattia',e:'🤒'} };
+const TIPO = { ferie:{l:'Ferie',e:'🌴'}, permesso:{l:'Permesso',e:'⏰'}, chiusura:{l:'Chiusura',e:'🔒'}, malattia:{l:'Malattia',e:'🤒'}, nota:{l:'Nota',e:'📝'} };
 const DURATA = { intera:'Intera giornata', mattina:'Solo mattina', pomeriggio:'Solo pomeriggio' };
 const RUOLO  = { admin:{l:'Admin'}, admin_sede:{l:'Admin Sede'}, utente:{l:'Utente'} };
 const NAV    = [
@@ -263,7 +285,7 @@ const NAV    = [
   {id:'log',        l:'Log',             ic:'📋', sec:'impostazioni', r:['admin']},
 ];
 const LOG_IC = {login:'🔐',logout:'🚪',calendario_insert:'📅',calendario_delete:'🗑',utente_create:'👤',sede_create:'🏢',email_inviata:'📧'};
-const SWATCHES = ['#2E6DA4','#27AE60','#8E44AD','#E8A838','#C0392B','#16A085','#E74C3C','#1ABC9C'];
+const SWATCHES = ['#9DBF60','#77797a','#4A4C4D','#D5E3B7','#C0392B','#8E44AD','#E8A838','#16A085'];
 
 /* ══════════════════════════════════════════
    UTILITÀ
@@ -407,7 +429,7 @@ function renderPage(){
 /* ══════════════════════════════════════════
    HELPERS HTML
 ══════════════════════════════════════════ */
-function bTipo(t){ const c=TIPO[t]; return c?`<span class="bg bg${t[0]}">${c.e} ${c.l}</span>`:t; }
+function bTipo(t){ const c=TIPO[t]; return c?`<span class="bg bg${t==='nota'?'n':t[0]}">${c.e} ${c.l}</span>`:t; }
 function bRuolo(r){ return `<span class="bg bg${r==='admin'?'a':r==='admin_sede'?'as':'u'}">${RUOLO[r]?.l||r}</span>`; }
 function sedeDot(sid){
   const s=S.sedi.find(x=>x.id===sid); if(!s) return '';
@@ -444,15 +466,27 @@ function renderCal(pb){
       let dot='';
       if(ev2){
         if(ev2.tipo==='chiusura') dot=`<div class="cd dC">✕</div>`;
+        else if(ev2.tipo==='nota') dot=`<div class="cd dN">N</div>`;
         else{
-          const dc=ev2.tipo==='ferie'?(ev2.durata==='mattina'?'dFm':ev2.durata==='pomeriggio'?'dFp':'dF'):ev2.tipo==='permesso'?'dP':'dM';
+          const dc=ev2.tipo==='ferie'
+            ?(ev2.durata==='mattina'?'dFm':ev2.durata==='pomeriggio'?'dFp':'dF')
+            :ev2.tipo==='permesso'
+              ?(ev2.durata==='mattina'?'dPm':ev2.durata==='pomeriggio'?'dPp':'dP')
+              :ev2.tipo==='malattia'
+                ?(ev2.durata==='mattina'?'dMm':ev2.durata==='pomeriggio'?'dMp':'dM')
+                :'dF';
           const lt={ferie:'F',permesso:'P',malattia:'M'}[ev2.tipo]||'?';
           dot=`<div class="cd ${dc}">${lt}</div>`;
         }
       }
       const cld2=closed.has(d)&&!row.cl;
       const eid=ev2?ev2.id:'';
-      const tip=ev2?`title="${esc(TIPO[ev2.tipo]?.l||'')} — ${ev2.tipo==='chiusura'?'Chiusura sede':esc(uNome(ev2.utente_id))}${ev2.note?' — '+esc(ev2.note):''}"`:'' ;
+      // tooltip: mostra durata e note (non nome/tipo che sono già visibili)
+      let tipParts=[];
+      if(ev2&&ev2.tipo!=='chiusura'&&ev2.tipo!=='nota'&&ev2.durata&&ev2.durata!=='intera') tipParts.push(DURATA[ev2.durata]||ev2.durata);
+      if(ev2?.note) tipParts.push(ev2.note);
+      if(ev2?.tipo==='nota'&&ev2.note) tipParts.push(ev2.note);
+      const tip=tipParts.length?`title="${esc(tipParts.join(' — ')))}"`:'';
       return `<td><div class="cc${we?' we':''}${td?' td0':''}${(row.cl&&ev2)||cld2?' cld':''}" data-d="${d}" data-u="${esc(row.cl?'':row.id)}" data-e="${esc(eid)}" data-cl="${row.cl?1:0}" ${tip}>${dot}</div></td>`;
     }).join('');
     return `<tr class="${row.cl?'crow-cl':''}"><td class="chn">${esc(row.lbl)}</td>${cells}</tr>`;
@@ -462,13 +496,15 @@ function renderCal(pb){
   const pN=ev.filter(e=>e.tipo==='permesso').length;
   const cN=ev.filter(e=>e.tipo==='chiusura').length;
   const mN=ev.filter(e=>e.tipo==='malattia').length;
+  const nN=ev.filter(e=>e.tipo==='nota').length;
 
   pb.innerHTML=`<div class="fi-an">
     <div class="sg">
-      <div class="sc"><div class="si" style="background:var(--blue-xlight)">🌴</div><div><div class="sl">Ferie mese</div><div class="sv">${fN}</div></div></div>
-      <div class="sc"><div class="si" style="background:var(--accent-light)">⏰</div><div><div class="sl">Permessi</div><div class="sv">${pN}</div></div></div>
+      <div class="sc"><div class="si" style="background:var(--g100)">🌴</div><div><div class="sl">Ferie mese</div><div class="sv">${fN}</div></div></div>
+      <div class="sc"><div class="si" style="background:var(--blue-xlight)">⏰</div><div><div class="sl">Permessi</div><div class="sv">${pN}</div></div></div>
       <div class="sc"><div class="si" style="background:var(--red-light)">🔒</div><div><div class="sl">Chiusure</div><div class="sv">${cN}</div></div></div>
       <div class="sc"><div class="si" style="background:var(--purple-light)">🤒</div><div><div class="sl">Malattie</div><div class="sv">${mN}</div></div></div>
+      <div class="sc"><div class="si" style="background:#FEF3DC">📝</div><div><div class="sl">Note</div><div class="sv">${nN}</div></div></div>
     </div>
     <div class="card">
       <div class="ch">
@@ -536,7 +572,7 @@ function openAddEv(data,uDefault,sedeId){
         ${utenti.map(u=>`<option value="${u.id}"${u.id===uDefault?' selected':''}>${esc(u.nome+' '+u.cognome)}</option>`).join('')}
       </select>
     </div>
-    <div class="fg"><div class="fl">Durata</div>
+    <div class="fg" id="edr-fg"><div class="fl">Durata</div>
       <select class="fse" id="edr">
         ${Object.entries(DURATA).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}
       </select>
@@ -545,21 +581,22 @@ function openAddEv(data,uDefault,sedeId){
   openM(`📅 Nuovo evento`,body,[
     {l:'Annulla',c:'bs',a:closeM},
     {l:'✅ Salva',c:'bp',a:async()=>{
-      const d=$('ed').value,t=tipo,dr=$('edr').value,n=$('en').value.trim();
-      const u=t==='chiusura'?null:($('eu').value||null);
+      const d=$('ed').value,t=tipo,n=$('en').value.trim();
+      const dr=t==='nota'||t==='chiusura'?'intera':($('edr').value||'intera');
+      const u=t==='chiusura'||t==='nota'?null:($('eu').value||null);
       if(!d){toast('Seleziona una data','err');return;}
-      if(t!=='chiusura'&&!u){toast('Seleziona un dipendente','err');return;}
-      try{
+      if(t!=='chiusura'&&t!=='nota'&&!u){toast('Seleziona un dipendente','err');return;}      try{
         const [ev]=await db('POST',T('calendario'),{body:{data:d,tipo:t,utente_id:u,sede_id:sedeId,durata:dr,note:n,created_by:S.user.id}});
         S.eventi.push(ev);
-        logAct('calendario_insert',`${TIPO[t]?.l||t}: ${d} — ${u?uNome(u):'Chiusura sede'}`);
+        logAct('calendario_insert',`${TIPO[t]?.l||t}: ${d} — ${u?uNome(u):t==='chiusura'?'Chiusura sede':'Nota'}`);
         closeM();renderPage();toast('Evento aggiunto ✅');
       }catch(e){toast(e.message,'err');}
     }},
   ]);
   const ref=()=>{
-    const isCl=tipo==='chiusura';
-    $('eu-fg').style.display=isCl?'none':'';
+    const isCl=tipo==='chiusura',isNt=tipo==='nota';
+    $('eu-fg').style.display=(isCl||isNt)?'none':'';
+    $('edr-fg').style.display=(isCl||isNt)?'none':'';
     document.querySelectorAll('.etb-btn').forEach(b=>{
       b.style.background=b.dataset.t===tipo?'var(--navy)':'var(--g100)';
       b.style.color=b.dataset.t===tipo?'#fff':'var(--g700)';
@@ -710,10 +747,10 @@ function openUtenteM(u){
       <div class="fg"><div class="fl">Nome *</div><input class="fi" id="un" value="${esc(u?.nome||'')}"/></div>
       <div class="fg"><div class="fl">Cognome *</div><input class="fi" id="ucg" value="${esc(u?.cognome||'')}"/></div>
     </div>
-    <div class="fg"><div class="fl">Email *</div><input class="fi" id="ue" type="email" value="${esc(u?.email||'')}"/></div>
+    <div class="fg"><div class="fl" id="ue-lbl">Email *</div><input class="fi" id="ue" type="email" value="${esc(u?.email||'')}"/></div>
     ${!u?`<div class="fg"><div class="fl">Password *</div><input class="fi" id="upw" type="password" placeholder="Minimo 6 caratteri"/></div>`:''}
     <div class="fg"><div class="fl">Ruolo</div>
-      <select class="fse" id="ur">
+      <select class="fse" id="ur" onchange="document.getElementById('ue-lbl').textContent=this.value==='utente'?'Email (opzionale)':'Email *'">
         ${Object.entries(RUOLO).map(([k,v])=>`<option value="${k}"${u?.ruolo===k?' selected':''}>${v.l}</option>`).join('')}
       </select></div>
     <div class="fg"><div class="fl">Sedi associate</div>
@@ -731,7 +768,8 @@ function openUtenteM(u){
       const nome=$('un').value.trim(),cog=$('ucg').value.trim(),email=$('ue').value.trim();
       const ruolo=$('ur').value,attivo=$('uat').checked;
       const sediSel=[...$('usg').querySelectorAll('input:checked')].map(x=>x.value);
-      if(!nome||!cog||!email){toast('Compila tutti i campi obbligatori','err');return;}
+      const emailObbligatoria=ruolo!=='utente';
+      if(!nome||!cog||(emailObbligatoria&&!email)){toast('Compila tutti i campi obbligatori','err');return;}
       try{
         if(u){
           await db('PATCH',T('profili'),{flt:`id=eq.${u.id}`,body:{nome,cognome:cog,email,ruolo,attivo}});
