@@ -230,10 +230,10 @@ input:checked+.ts2::after{transform:translateX(16px)}
    CONFIG — inserire URL e chiave Supabase
 ══════════════════════════════════════════ */
 const CFG = {
-  URL: 'https://iczsdqcnvauopwkuspti.supabase.co',  // ← es. https://abcdefgh.supabase.co
-  KEY: 'sb_publishable_vijGmY6ZHzPiJ0XhGSLgug_Hqpzym5V',   // ← chiave anon/public (Settings → API → anon public)
+  URL: 'https://TUOPROGETTOSUPABASE.supabase.co',  // ← es. https://abcdefgh.supabase.co
+  KEY: 'TUA_ANON_KEY',   // ← chiave anon/public (Settings → API → anon public)
   // URL base delle Edge Functions (uguale al progetto, non cambiare il path)
-  FN:  'https://iczsdqcnvauopwkuspti.supabase.co/functions/v1',
+  FN:  'https://TUOPROGETTOSUPABASE.supabase.co/functions/v1',
 };
 const T = n => `ferie_${n}`;   // prefisso tabelle
 
@@ -343,7 +343,7 @@ async function loadAll(){
   const [sedi,utenti,eventi,log,mail,assoc] = await Promise.all([
     db('GET',T('sedi'),{ord:'nome.asc'}),
     db('GET',T('profili'),{ord:'cognome.asc'}),
-    db('GET',T('calendario'),{flt:`data=gte.${y}-${p2(m-1>0?m-1:1)}-01&data=lte.${y}-${p2(m+2>12?12:m+2)}-${dim(y,m)}`,ord:'data.asc'}),
+    db('GET',T('calendario'),{flt:`data=gte.${y}-${p2(m+1)}-01&data=lte.${y}-${p2(m+1)}-${dim(y,m)}`,ord:'data.asc'}),
     db('GET',T('log'),{ord:'created_at.desc',lim:'200'}),
     db('GET',T('mail_config'),{ord:'created_at.asc'}),
     db('GET',T('utenti_sedi')),
