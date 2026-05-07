@@ -528,13 +528,15 @@ function renderCal(pb){
     return sedeHeader + rows.map(r=>makeRow(r)).join('');
   }
 
-  // Calcola stats su tutte le sedi visibili
-  const tuttiEv=S.eventi.filter(e=>e.data.startsWith(pfx));
-  const fN=tuttiEv.filter(e=>e.tipo==='ferie').length;
-  const pN=tuttiEv.filter(e=>e.tipo==='permesso').length;
-  const cN=tuttiEv.filter(e=>e.tipo==='chiusura').length;
-  const mN=tuttiEv.filter(e=>e.tipo==='malattia').length;
-  const nN=tuttiEv.filter(e=>e.tipo==='nota').length;
+  // stats: per admin tutti gli eventi, per utente solo i suoi
+  const evPerStats = isAdm
+    ? S.eventi.filter(e=>e.data.startsWith(pfx))
+    : S.eventi.filter(e=>e.data.startsWith(pfx)&&(e.utente_id===S.user.id||(e.sede_id&&(S.user.sedi||[]).includes(e.sede_id)&&!e.utente_id)));
+  const fN=evPerStats.filter(e=>e.tipo==='ferie').length;
+  const pN=evPerStats.filter(e=>e.tipo==='permesso').length;
+  const cN=evPerStats.filter(e=>e.tipo==='chiusura').length;
+  const mN=evPerStats.filter(e=>e.tipo==='malattia').length;
+  const nN=evPerStats.filter(e=>e.tipo==='nota').length;
 
   const thDays=Array.from({length:nd},(_,i)=>{
     const d=i+1,we=isWE(y,m,d),td=isTd(y,m,d);
@@ -1087,6 +1089,9 @@ async function doLogin(){
     if(!profilo) throw new Error('Profilo non trovato. Contatta l\'amministratore.');
     S.user=profilo;
     await loadAll();
+    // arricchisce S.user con le sedi caricate da loadAll
+    const userConSedi=S.utenti.find(u=>u.id===S.user.id);
+    if(userConSedi) S.user={...S.user,sedi:userConSedi.sedi||[]};
     $('lp').classList.add('hid'); $('app').classList.remove('hid');
     $('tb-date').textContent=`📅 ${fmt(new Date())}`;
     renderSidebar(); goPage('calendario');
