@@ -486,7 +486,7 @@ function renderCal(pb){
       if(ev2&&ev2.tipo!=='chiusura'&&ev2.tipo!=='nota'&&ev2.durata&&ev2.durata!=='intera') tipParts.push(DURATA[ev2.durata]||ev2.durata);
       if(ev2?.note) tipParts.push(ev2.note);
       if(ev2?.tipo==='nota'&&ev2.note) tipParts.push(ev2.note);
-      const tip=tipParts.length?`title="${esc(tipParts.join(' — ')))}"`:'';
+      const tip=tipParts.length?`title="${esc(tipParts.join(' — '))}"`:'';
       return `<td><div class="cc${we?' we':''}${td?' td0':''}${(row.cl&&ev2)||cld2?' cld':''}" data-d="${d}" data-u="${esc(row.cl?'':row.id)}" data-e="${esc(eid)}" data-cl="${row.cl?1:0}" ${tip}>${dot}</div></td>`;
     }).join('');
     return `<tr class="${row.cl?'crow-cl':''}"><td class="chn">${esc(row.lbl)}</td>${cells}</tr>`;
