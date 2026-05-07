@@ -468,9 +468,10 @@ function renderCal(pb){
   const sede=S.sedi.find(s=>s.id===sid)||S.sedi[0];
   const sId=sede?.id;
   const pfx=`${y}-${p2(m+1)}-`;
+  const utenti=S.utenti.filter(u=>u.sedi.includes(sId));
   // eventi sede (chiusura/nota senza utente) filtrati per sede corrente
   const evSede=S.eventi.filter(e=>e.data.startsWith(pfx)&&e.sede_id===sId&&!e.utente_id);
-  // eventi utente (ferie/permesso/malattia/nota con utente) filtrati per utenti della sede
+  // eventi utente filtrati per utenti della sede (appaiono su tutte le sedi dell'utente)
   const utentiIdSede=new Set(utenti.map(u=>u.id));
   const evUtenti=S.eventi.filter(e=>e.data.startsWith(pfx)&&e.utente_id&&utentiIdSede.has(e.utente_id));
   const ev=[...evSede,...evUtenti];
@@ -481,7 +482,6 @@ function renderCal(pb){
     eMap[d].push(e);
   });
   const closed=new Set(evSede.filter(e=>e.tipo==='chiusura').map(e=>parseInt(e.data.slice(8,10))));
-  const utenti=S.utenti.filter(u=>u.sedi.includes(sId));
   const rows=[{id:'__c__',cl:true,lbl:'SEDE'},...utenti.map(u=>({...u,lbl:`${u.cognome} ${u.nome}`}))];
 
   const thDays=Array.from({length:nd},(_,i)=>{
