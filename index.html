@@ -465,76 +465,91 @@ function renderCal(pb){
   const {y,m,sid}=S.cal;
   const nd=dim(y,m);
   const isAdm=S.user?.ruolo==='admin'||S.user?.ruolo==='admin_sede';
-  const sede=S.sedi.find(s=>s.id===sid)||S.sedi[0];
-  const sId=sede?.id;
   const pfx=`${y}-${p2(m+1)}-`;
-  const utenti=S.utenti.filter(u=>u.sedi.includes(sId));
-  // eventi sede (chiusura/nota senza utente) filtrati per sede corrente
-  const evSede=S.eventi.filter(e=>e.data.startsWith(pfx)&&e.sede_id===sId&&!e.utente_id);
-  // eventi utente filtrati per utenti della sede (appaiono su tutte le sedi dell'utente)
-  const utentiIdSede=new Set(utenti.map(u=>u.id));
-  const evUtenti=S.eventi.filter(e=>e.data.startsWith(pfx)&&e.utente_id&&utentiIdSede.has(e.utente_id));
-  const ev=[...evSede,...evUtenti];
-  const eMap={};
-  ev.forEach(e=>{
-    const d=parseInt(e.data.slice(8,10));
-    if(!eMap[d])eMap[d]=[];
-    eMap[d].push(e);
-  });
-  const closed=new Set(evSede.filter(e=>e.tipo==='chiusura').map(e=>parseInt(e.data.slice(8,10))));
-  const rows=[{id:'__c__',cl:true,lbl:'SEDE'},...utenti.map(u=>({...u,lbl:`${u.cognome} ${u.nome}`}))];
+
+  // Sedi visibili: admin vede tutte, utente solo le sue
+  const sediVisibili = isAdm
+    ? S.sedi.filter(s=>s.attiva)
+    : S.sedi.filter(s=>s.attiva && (S.user?.sedi||[]).includes(s.id));
+
+  // Sede corrente per admin
+  const sede=S.sedi.find(s=>s.id===sid)||sediVisibili[0];
+  const sId=sede?.id;
+
+  // ── helper: genera le righe tbody per una sede ──
+  function righePerSede(sedeObj){
+    const sid2=sedeObj.id;
+    const utentiS=S.utenti.filter(u=>u.sedi.includes(sid2));
+    const utentiIds=new Set(utentiS.map(u=>u.id));
+    const evS=S.eventi.filter(e=>e.data.startsWith(pfx)&&e.sede_id===sid2&&!e.utente_id);
+    const evU=S.eventi.filter(e=>e.data.startsWith(pfx)&&e.utente_id&&utentiIds.has(e.utente_id));
+    const eMapS={};
+    [...evS,...evU].forEach(e=>{ const d=parseInt(e.data.slice(8,10)); if(!eMapS[d])eMapS[d]=[]; eMapS[d].push(e); });
+    const closedS=new Set(evS.filter(e=>e.tipo==='chiusura').map(e=>parseInt(e.data.slice(8,10))));
+
+    function makeDot(ev2,isCl){
+      if(!ev2) return '';
+      if(ev2.tipo==='chiusura') return `<div class="cd dC">✕</div>`;
+      if(ev2.tipo==='nota') return `<div class="cd dN">N</div>`;
+      const dc=ev2.tipo==='ferie'
+        ?(ev2.durata==='mattina'?'dFm':ev2.durata==='pomeriggio'?'dFp':'dF')
+        :ev2.tipo==='permesso'
+          ?(ev2.durata==='mattina'?'dPm':ev2.durata==='pomeriggio'?'dPp':'dP')
+          :ev2.tipo==='malattia'
+            ?(ev2.durata==='mattina'?'dMm':ev2.durata==='pomeriggio'?'dMp':'dM')
+            :'dF';
+      return `<div class="cd ${dc}">${{ferie:'F',permesso:'P',malattia:'M'}[ev2.tipo]||'?'}</div>`;
+    }
+
+    function makeRow(row){
+      const cells=Array.from({length:nd},(_,i)=>{
+        const d=i+1,we=isWE(y,m,d),td=isTd(y,m,d);
+        const de=eMapS[d]||[];
+        const ev2=row.cl
+          ? de.find(e=>(e.tipo==='chiusura'||e.tipo==='nota')&&!e.utente_id)
+          : de.find(e=>e.utente_id===row.id);
+        const cld2=closedS.has(d)&&!row.cl;
+        const eid=ev2?ev2.id:'';
+        let tipParts=[];
+        if(ev2&&ev2.tipo!=='chiusura'&&ev2.tipo!=='nota'&&ev2.durata&&ev2.durata!=='intera') tipParts.push(DURATA[ev2.durata]||ev2.durata);
+        if(ev2?.note) tipParts.push(ev2.note);
+        const tip=tipParts.length?`title="${esc(tipParts.join(' — '))}"`:'';
+        return `<td><div class="cc${we?' we':''}${td?' td0':''}${(row.cl&&ev2)||cld2?' cld':''}" data-d="${d}" data-u="${esc(row.cl?'':row.id)}" data-e="${esc(eid)}" data-cl="${row.cl?1:0}" data-sid="${sid2}" ${tip}>${makeDot(ev2,row.cl)}</div></td>`;
+      }).join('');
+      return `<tr class="${row.cl?'crow-cl':''}"><td class="chn">${esc(row.lbl)}</td>${cells}</tr>`;
+    }
+
+    // riga intestazione sede (se vista multi-sede)
+    const sedeHeader = !isAdm && sediVisibili.length>1
+      ? `<tr><td colspan="${nd+1}" style="padding:6px 14px;background:${sedeObj.colore}18;border-top:2px solid ${sedeObj.colore};font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:${sedeObj.colore}">${esc(sedeObj.nome)}</td></tr>`
+      : '';
+
+    const rows=[{id:'__c__',cl:true,lbl: !isAdm && sediVisibili.length>1 ? esc(sedeObj.nome) : 'SEDE'},...utentiS.map(u=>({...u,lbl:`${u.cognome} ${u.nome}`}))];
+    return sedeHeader + rows.map(r=>makeRow(r)).join('');
+  }
+
+  // Calcola stats su tutte le sedi visibili
+  const tuttiEv=S.eventi.filter(e=>e.data.startsWith(pfx));
+  const fN=tuttiEv.filter(e=>e.tipo==='ferie').length;
+  const pN=tuttiEv.filter(e=>e.tipo==='permesso').length;
+  const cN=tuttiEv.filter(e=>e.tipo==='chiusura').length;
+  const mN=tuttiEv.filter(e=>e.tipo==='malattia').length;
+  const nN=tuttiEv.filter(e=>e.tipo==='nota').length;
 
   const thDays=Array.from({length:nd},(_,i)=>{
     const d=i+1,we=isWE(y,m,d),td=isTd(y,m,d);
     return `<th class="${we?'we':''} ${td?'td0':''}">${p2(d)}<br><span style="font-weight:400;font-size:8px">${GIORNI[new Date(y,m,d).getDay()]}</span></th>`;
   }).join('');
 
-  const trs=rows.map(row=>{
-    const cells=Array.from({length:nd},(_,i)=>{
-      const d=i+1,we=isWE(y,m,d),td=isTd(y,m,d);
-      const de=eMap[d]||[];
-      let ev2=row.cl
-        ? de.find(e=>(e.tipo==='chiusura'||e.tipo==='nota')&&!e.utente_id)
-        : de.find(e=>e.utente_id===row.id);
-      let dot='';
-      if(ev2){
-        if(ev2.tipo==='chiusura') dot=`<div class="cd dC">✕</div>`;
-        else if(ev2.tipo==='nota') dot=`<div class="cd dN">N</div>`;
-        else{
-          const dc=ev2.tipo==='ferie'
-            ?(ev2.durata==='mattina'?'dFm':ev2.durata==='pomeriggio'?'dFp':'dF')
-            :ev2.tipo==='permesso'
-              ?(ev2.durata==='mattina'?'dPm':ev2.durata==='pomeriggio'?'dPp':'dP')
-              :ev2.tipo==='malattia'
-                ?(ev2.durata==='mattina'?'dMm':ev2.durata==='pomeriggio'?'dMp':'dM')
-                :'dF';
-          const lt={ferie:'F',permesso:'P',malattia:'M'}[ev2.tipo]||'?';
-          dot=`<div class="cd ${dc}">${lt}</div>`;
-        }
-      }
-      const cld2=closed.has(d)&&!row.cl;
-      const eid=ev2?ev2.id:'';
-      // tooltip: mostra durata e note (non nome/tipo che sono già visibili)
-      let tipParts=[];
-      if(ev2&&ev2.tipo!=='chiusura'&&ev2.tipo!=='nota'&&ev2.durata&&ev2.durata!=='intera') tipParts.push(DURATA[ev2.durata]||ev2.durata);
-      if(ev2?.note) tipParts.push(ev2.note);
-      if(ev2?.tipo==='nota'&&ev2.note) tipParts.push(ev2.note);
-      const tip=tipParts.length?`title="${esc(tipParts.join(' — '))}"`:'';
-      return `<td><div class="cc${we?' we':''}${td?' td0':''}${(row.cl&&ev2)||cld2?' cld':''}" data-d="${d}" data-u="${esc(row.cl?'':row.id)}" data-e="${esc(eid)}" data-cl="${row.cl?1:0}" ${tip}>${dot}</div></td>`;
-    }).join('');
-    return `<tr class="${row.cl?'crow-cl':''}"><td class="chn">${esc(row.lbl)}</td>${cells}</tr>`;
-  }).join('');
+  // Per admin: mostra solo la sede selezionata. Per utente: tutte le sedi accorpate
+  const sediDaMostrare = isAdm ? [sede].filter(Boolean) : sediVisibili;
+  const trs = sediDaMostrare.map(s=>righePerSede(s)).join('');
 
-  const allEv=[...evSede,...evUtenti];
-  const fN=allEv.filter(e=>e.tipo==='ferie').length;
-  const pN=allEv.filter(e=>e.tipo==='permesso').length;
-  const cN=allEv.filter(e=>e.tipo==='chiusura').length;
-  const mN=allEv.filter(e=>e.tipo==='malattia').length;
-  const nN=allEv.filter(e=>e.tipo==='nota').length;
+  const legItem=(cls,lbl)=>`<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd ${cls}" style="width:16px;height:16px;font-size:8px;flex-shrink:0">${cls==='dC'?'✕':cls.startsWith('dF')?'F':cls.startsWith('dP')?'P':cls.startsWith('dM')&&cls!=='dN'?'M':'N'}</span>${lbl}</span>`;
 
   pb.innerHTML=`<div class="fi-an">
     <div class="sg">
-      <div class="sc"><div class="si" style="background:var(--g100)">🌴</div><div><div class="sl">Ferie mese</div><div class="sv">${fN}</div></div></div>
+      <div class="sc"><div class="si" style="background:var(--blue-xlight)">🌴</div><div><div class="sl">Ferie</div><div class="sv">${fN}</div></div></div>
       <div class="sc"><div class="si" style="background:var(--blue-xlight)">⏰</div><div><div class="sl">Permessi</div><div class="sv">${pN}</div></div></div>
       <div class="sc"><div class="si" style="background:var(--red-light)">🔒</div><div><div class="sl">Chiusure</div><div class="sv">${cN}</div></div></div>
       <div class="sc"><div class="si" style="background:var(--purple-light)">🤒</div><div><div class="sl">Malattie</div><div class="sv">${mN}</div></div></div>
@@ -548,21 +563,20 @@ function renderCal(pb){
             <span class="cml">${MESI[m]} ${y}</span>
             <button class="bic" id="cnext">▶</button>
           </div>
+          ${isAdm?`
           <select class="csel" id="csel">
-            ${S.sedi.map(s=>`<option value="${s.id}"${s.id===sId?' selected':''}>${esc(s.nome)}</option>`).join('')}
+            ${sediVisibili.map(s=>`<option value="${s.id}"${s.id===sId?' selected':''}>${esc(s.nome)}</option>`).join('')}
           </select>
           ${sede?sedeDot(sede.id):''}
+          `:''}
         </div>
         ${isAdm?`<button class="btn bp-green bsm" id="cadd">+ Aggiungi</button>`:''}
       </div>
       <div class="cleg">
-        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd dF" style="width:16px;height:16px;font-size:8px;flex-shrink:0">F</span>Ferie</span>
-        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd dFm" style="width:16px;height:16px;font-size:8px;flex-shrink:0">F</span>Ferie ½</span>
-        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd dP" style="width:16px;height:16px;font-size:8px;flex-shrink:0">P</span>Permesso</span>
-        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd dPm" style="width:16px;height:16px;font-size:8px;flex-shrink:0">P</span>Permesso ½</span>
-        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd dM" style="width:16px;height:16px;font-size:8px;flex-shrink:0">M</span>Malattia</span>
-        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd dC" style="width:16px;height:16px;font-size:9px;flex-shrink:0;border-radius:2px">✕</span>Chiusura</span>
-        <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd dN" style="width:16px;height:16px;font-size:8px;flex-shrink:0">N</span>Nota</span>
+        ${legItem('dF','Ferie')} ${legItem('dFm','Ferie ½')}
+        ${legItem('dP','Permesso')} ${legItem('dPm','Permesso ½')}
+        ${legItem('dM','Malattia')} ${legItem('dMm','Malattia ½')}
+        ${legItem('dC','Chiusura')} ${legItem('dN','Nota')}
         <span class="clh">${isAdm?'💡 Clicca su una cella per aggiungere/vedere eventi':'👁 Solo visualizzazione'}</span>
       </div>
       <div class="cscr">
@@ -582,25 +596,20 @@ function renderCal(pb){
     S.cal.m===11?(S.cal.y++,S.cal.m=0):S.cal.m++;
     loadEventi().then(()=>renderPage());
   });
-  $('csel').addEventListener('change',e=>{S.cal.sid=e.target.value;renderPage();});
-  if(isAdm&&$('cadd')) $('cadd').addEventListener('click',()=>openAddEv(null,null,sId));
+  if(isAdm){
+    $('csel')?.addEventListener('change',e=>{S.cal.sid=e.target.value;renderPage();});
+    $('cadd')?.addEventListener('click',()=>openAddEv(null,null,sId));
+  }
 
   pb.querySelectorAll('.cc').forEach(c=>{
     c.addEventListener('click',()=>{
       if(!isAdm) return;
       const d=parseInt(c.dataset.d),eid=c.dataset.e;
       const data=`${y}-${p2(m+1)}-${p2(d)}`;
-      const isSede=c.dataset.cl==='1';
-      if(eid){
-        const e=S.eventi.find(x=>x.id===eid); if(e) openDetailEv(e,sId);
-      } else {
-        if(isSede){
-          // riga SEDE: apre modal con solo chiusura/nota
-          openAddEvSede(data,sId);
-        } else {
-          openAddEv(data,c.dataset.u||null,sId);
-        }
-      }
+      const cSid=c.dataset.sid||sId;
+      if(eid){ const e=S.eventi.find(x=>x.id===eid); if(e) openDetailEv(e,cSid); }
+      else if(c.dataset.cl==='1') openAddEvSede(data,cSid);
+      else openAddEv(data,c.dataset.u||null,cSid);
     });
   });
 }
