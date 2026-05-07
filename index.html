@@ -984,8 +984,21 @@ function openMailM(conf){
   const confH = confOra.slice(0,2);
   const confM = confOra.slice(3,5) === '30' ? '30' : '00';
   const gd=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  // Utenti admin e admin_sede selezionabili
+  const admUtenti=S.utenti.filter(u=>u.ruolo==='admin'||u.ruolo==='admin_sede');
+  // Utente selezionato di default: quello della conf, o l'utente corrente
+  const defAdminId=conf?.admin_id||S.user.id;
+  const defAdmin=S.utenti.find(u=>u.id===defAdminId)||S.user;
   const body=`
-    <div class="fg"><div class="fl">Email destinatario *</div><input class="fi" id="me" type="email" value="${esc(conf?.email_destinatario||S.user?.email||'')}"/></div>
+    <div class="fg"><div class="fl">Utente admin *</div>
+      <select class="fse" id="madm">
+        ${admUtenti.map(u=>`<option value="${u.id}" data-email="${esc(u.email||'')}" ${u.id===defAdminId?'selected':''}>${esc(u.cognome+' '+u.nome)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="fg"><div class="fl">Email destinatario *</div>
+      <input class="fi" id="me" type="email" value="${esc(conf?.email_destinatario||defAdmin?.email||'')}"/>
+      <div style="font-size:11px;color:var(--g500);margin-top:4px">💡 Precompilata con l'email dell'utente, modificabile per inviare ad un altro indirizzo</div>
+    </div>
     <div class="fr">
       <div class="fg"><div class="fl">Frequenza</div>
         <select class="fse" id="mf">
@@ -1015,11 +1028,13 @@ function openMailM(conf){
   openM(conf?'✏ Modifica configurazione':'+ Nuova configurazione email',body,[
     {l:'Annulla',c:'bs',a:closeM},
     {l:'Salva',c:'bp',a:async()=>{
+      const adminId=$('madm').value;
       const em=$('me').value.trim(),fr=$('mf').value,dw=parseInt($('mw').value||'1'),rd=parseInt($('mrd').value),ra=parseInt($('mra').value);
       const or=`${$('moh').value}:${$('mom').value}:00`;
+      if(!adminId){toast('Seleziona un utente admin','err');return;}
       if(!em){toast('Inserisci un indirizzo email','err');return;}
       try{
-        const pl={email_destinatario:em,frequenza:fr,orario:or,giorno_settimana:dw,range_da:rd,range_a:ra,attiva:true,admin_id:S.user.id};
+        const pl={email_destinatario:em,frequenza:fr,orario:or,giorno_settimana:dw,range_da:rd,range_a:ra,attiva:true,admin_id:adminId};
         if(conf){
           await db('PATCH',T('mail_config'),{flt:`id=eq.${conf.id}`,body:pl});
           S.mailCfg=S.mailCfg.map(c=>c.id===conf.id?{...c,...pl}:c);
@@ -1036,7 +1051,18 @@ function openMailM(conf){
     if(el) el.textContent=`💡 L'email di oggi includerà i giorni dal ${fmt(addDays(rd))} al ${fmt(addDays(ra))}`;
     if($('mgd')) $('mgd').style.display=$('mf')?.value==='settimanale'?'':'none';
   };
-  setTimeout(()=>{ $('mf')?.addEventListener('change',upd); $('mrd')?.addEventListener('input',upd); $('mra')?.addEventListener('input',upd); upd(); },50);
+  // Quando si cambia utente, precompila l'email (solo se non modificata dall'utente)
+  setTimeout(()=>{
+    $('madm')?.addEventListener('change',e=>{
+      const opt=e.target.selectedOptions[0];
+      const emailAdm=opt?.dataset?.email||'';
+      $('me').value=emailAdm;
+    });
+    $('mf')?.addEventListener('change',upd);
+    $('mrd')?.addEventListener('input',upd);
+    $('mra')?.addEventListener('input',upd);
+    upd();
+  },50);
 }
 
 /* ══════════════════════════════════════════
