@@ -916,6 +916,7 @@ function renderEmail(pb){
                 <div class="tg"><input type="checkbox" class="mtog" data-id="${c.id}"${c.attiva?' checked':''}><span class="ts2"></span></div>
                 <span style="font-size:12px;font-weight:600;color:${c.attiva?'var(--green)':'var(--g500)'}">${c.attiva?'Attiva':'Inattiva'}</span>
               </label>
+              <button class="btn bs bsm" data-ml="${c.id}" data-email="${esc(c.email_destinatario)}">📋</button>
               <button class="btn bs bsm" data-me="${c.id}">✏</button>
               <button class="btn bd bsm" data-md="${c.id}">🗑</button>
             </div>
@@ -932,6 +933,7 @@ function renderEmail(pb){
     </div>
   </div>`;
   $('madd').addEventListener('click',()=>openMailM(null));
+  pb.querySelectorAll('[data-ml]').forEach(b=>b.addEventListener('click',()=>openMailLog(b.dataset.email)));
   pb.querySelectorAll('[data-me]').forEach(b=>b.addEventListener('click',()=>openMailM(S.mailCfg.find(c=>c.id===b.dataset.me))));
   pb.querySelectorAll('[data-md]').forEach(b=>b.addEventListener('click',()=>{
     const c=S.mailCfg.find(x=>x.id===b.dataset.md);
@@ -946,6 +948,35 @@ function renderEmail(pb){
     S.mailCfg=S.mailCfg.map(c=>c.id===id?{...c,attiva:val}:c);
     toast(val?'Email attivata':'Email disattivata'); renderPage();
   }));
+}
+
+async function openMailLog(email){
+  // Mostra modal con spinner mentre carica
+  openM(`📋 Log invii — ${email}`,`<div style="text-align:center;padding:20px"><span class="spn" style="border-color:rgba(46,109,164,.3);border-top-color:var(--blue);width:24px;height:24px"></span></div>`,[
+    {l:'Chiudi',c:'bs',a:closeM},
+  ]);
+  try{
+    // Ricarica log freschi dal db
+    const logs = await db('GET',T('log'),{
+      flt:`azione=eq.email_inviata`,
+      ord:'created_at.desc',
+      lim:'50',
+    })||[];
+    // Filtra per email destinatario nel dettaglio
+    const filtrati = logs.filter(l=>String(l.dettaglio||'').includes(email));
+    $('mbdy').innerHTML = !filtrati.length
+      ? `<div class="emp"><div class="emi">📭</div><div class="emt">Nessun invio registrato</div><div class="ems">per ${esc(email)}</div></div>`
+      : filtrati.map(l=>`
+          <div class="logr">
+            <div class="lic">📧</div>
+            <div>
+              <div class="lt">${fmtDt(l.created_at)}</div>
+              <div class="lx">${esc(String(l.dettaglio||''))}</div>
+            </div>
+          </div>`).join('');
+  }catch(e){
+    $('mbdy').innerHTML=`<div class="alert ae">⚠ ${esc(e.message)}</div>`;
+  }
 }
 
 function openMailM(conf){
