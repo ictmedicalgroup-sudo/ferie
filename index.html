@@ -583,9 +583,9 @@ function openAddEv(data,uDefault,sedeId){
     {l:'✅ Salva',c:'bp',a:async()=>{
       const d=$('ed').value,t=tipo,n=$('en').value.trim();
       const dr=t==='nota'||t==='chiusura'?'intera':($('edr').value||'intera');
-      const u=t==='chiusura'||t==='nota'?null:($('eu').value||null);
+      const u=t==='chiusura'?null:($('eu').value||null);
       if(!d){toast('Seleziona una data','err');return;}
-      if(t!=='chiusura'&&t!=='nota'&&!u){toast('Seleziona un dipendente','err');return;}      try{
+      if(t!=='chiusura'&&!u){toast('Seleziona un dipendente','err');return;}      try{
         const [ev]=await db('POST',T('calendario'),{body:{data:d,tipo:t,utente_id:u,sede_id:sedeId,durata:dr,note:n,created_by:S.user.id}});
         S.eventi.push(ev);
         logAct('calendario_insert',`${TIPO[t]?.l||t}: ${d} — ${u?uNome(u):t==='chiusura'?'Chiusura sede':'Nota'}`);
@@ -595,7 +595,7 @@ function openAddEv(data,uDefault,sedeId){
   ]);
   const ref=()=>{
     const isCl=tipo==='chiusura',isNt=tipo==='nota';
-    $('eu-fg').style.display=(isCl||isNt)?'none':'';
+    $('eu-fg').style.display=isCl?'none':'';
     $('edr-fg').style.display=(isCl||isNt)?'none':'';
     document.querySelectorAll('.etb-btn').forEach(b=>{
       b.style.background=b.dataset.t===tipo?'var(--navy)':'var(--g100)';
