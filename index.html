@@ -19,13 +19,14 @@
   --sh-sm:0 1px 3px rgba(74,76,77,.08),0 1px 2px rgba(74,76,77,.05);
   --sh-md:0 4px 12px rgba(74,76,77,.10);--sh-lg:0 12px 32px rgba(74,76,77,.14),0 4px 10px rgba(74,76,77,.07);
   --r:10px;--rsm:6px;--rlg:16px;
+  --verde:#9DBF60;--grigio:#77797a;--grigio-chiaro:#aaaaaa;
   font-family:'Raleway',sans-serif;
 }
 body{background:var(--g50);color:var(--g900);min-height:100vh;font-size:14px}
 
 /* ── Layout ── */
 #app{display:flex;flex-direction:column;min-height:100vh}
-#sidebar{display:none} /* non usata, sostituita da topbar */
+#sidebar{display:none}
 #main{flex:1;display:flex;flex-direction:column;min-height:100vh}
 
 /* ── Topbar ── */
@@ -39,12 +40,7 @@ body{background:var(--g50);color:var(--g900);min-height:100vh;font-size:14px}
   height:52px;display:flex;align-items:center;justify-content:space-between;
   border-bottom:1px solid var(--g100);
 }
-#tb-logo{display:flex;align-items:center;gap:11px}
-#tb-logo-circle{width:30px;height:30px;border-radius:50%;border:2px solid var(--g300);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-#tb-logo-dot{width:9px;height:9px;border-radius:50%;background:var(--g300)}
-#tb-logo-text{line-height:1.2}
-#tb-logo-name{font-size:12px;font-weight:800;letter-spacing:2.5px;color:var(--g700);text-transform:uppercase}
-#tb-logo-sub{font-size:7px;font-weight:600;letter-spacing:1.8px;color:var(--g500);text-transform:uppercase;margin-top:1px}
+#tb-logo{display:flex;align-items:center}
 #tb-right{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--g500)}
 #tb-user{font-weight:600;color:var(--g700);font-size:13px}
 #tb-date{font-size:12px;color:var(--g500)}
@@ -119,10 +115,10 @@ body{background:var(--g50);color:var(--g900);min-height:100vh;font-size:14px}
 .cc.we{background:rgba(240,242,247,.55)}.cc.td0{background:rgba(157,191,96,.10)}.cc.cld{background:rgba(192,57,43,.07)}
 .ctbl th.td0{background:rgba(157,191,96,.15);color:#5a7a20}
 .cd{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0}
-.dF{background:#77797a;color:#fff}.dFm{background:#a8a9aa;color:#fff}.dFp{background:#D5E3B7;color:#4A4C4D}
-.dP{background:#9DBF60;color:#fff}.dPm{background:#b8d280;color:#fff}.dPp{background:#D5E3B7;color:#4A4C4D}
-.dC{background:var(--red);color:#fff;border-radius:3px;width:100%;height:100%;font-size:11px}
-.dM{background:#8E44AD;color:#fff}.dMm{background:#b07cc6;color:#fff}.dMp{background:#e8d5f5;color:#8E44AD}
+.dF{background:#C0392B;color:#fff}.dFm{background:#e06050;color:#fff}.dFp{background:#e06050;color:#fff}
+.dP{background:#9DBF60;color:#fff}.dPm{background:#b8d280;color:#fff}.dPp{background:#b8d280;color:#fff}
+.dC{background:#C0392B;color:#fff;border-radius:3px;width:100%;height:100%;font-size:11px}
+.dM{background:#8E44AD;color:#fff}.dMm{background:#b07cc6;color:#fff}.dMp{background:#b07cc6;color:#fff}
 .dN{background:#E8A838;color:#fff}
 
 /* ── Tables ── */
@@ -209,15 +205,7 @@ input:checked+.ts2::after{transform:translateX(16px)}
   <div class="lbg" style="width:320px;height:320px;bottom:-80px;left:40px;background:var(--blue-mid)"></div>
   <div class="lcard">
     <div class="llogo">
-      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px">
-        <div style="width:32px;height:32px;border-radius:50%;border:2px solid var(--g300);display:flex;align-items:center;justify-content:center">
-          <div style="width:10px;height:10px;border-radius:50%;background:var(--g300)"></div>
-        </div>
-        <div style="text-align:left">
-          <div style="font-size:13px;font-weight:800;letter-spacing:3px;color:var(--g700);text-transform:uppercase">MEDICAL<span style="font-weight:300">GROUP</span></div>
-          <div style="font-size:8px;font-weight:600;letter-spacing:2px;color:var(--g500);text-transform:uppercase;margin-top:1px">GESTIONE FERIE</div>
-        </div>
-      </div>
+      <div id="login-logo"></div>
       <div style="height:1px;background:var(--g200);margin:14px 0"></div>
     </div>
     <div id="lerr" class="alert ae hid" style="margin-bottom:14px"></div>
@@ -231,13 +219,7 @@ input:checked+.ts2::after{transform:translateX(16px)}
 <div id="app" class="hid">
   <div id="topbar">
     <div id="tb-top">
-      <div id="tb-logo">
-        <div id="tb-logo-circle"><div id="tb-logo-dot"></div></div>
-        <div id="tb-logo-text">
-          <div id="tb-logo-name">MEDICAL<span style="font-weight:300">GROUP</span></div>
-          <div id="tb-logo-sub">GESTIONE FERIE</div>
-        </div>
-      </div>
+      <div id="tb-logo"></div>
       <div id="tb-right">
         <span id="tb-date"></span>
         <span id="tb-user">—</span>
@@ -263,6 +245,30 @@ input:checked+.ts2::after{transform:translateX(16px)}
 
 <script>
 'use strict';
+/* ── Logo SVG ── */
+function logoSVG(small){
+  const w=small?28:36,h=small?22:28;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 90 70" fill="none">
+    <circle cx="28" cy="22" r="19" stroke="#D5E3B7" stroke-width="3.5" fill="none"/>
+    <circle cx="40" cy="38" r="24" stroke="#77797A" stroke-width="3.5" fill="none"/>
+  </svg>`;
+}
+function logoHTML(small=false){ return `
+  <div style="display:flex;align-items:center;gap:${small?6:10}px;">
+    ${logoSVG(small)}
+    <div style="line-height:1.15;">
+      <div style="font-weight:300;font-size:${small?11:14}px;letter-spacing:4px;text-transform:uppercase;">
+        <span style="color:var(--grigio);">MEDICAL</span><span style="color:var(--verde);">GROUP</span>
+      </div>
+      <div style="font-size:9px;letter-spacing:2px;color:var(--grigio-chiaro);text-transform:uppercase;font-weight:500;">Gestione Ferie</div>
+    </div>
+  </div>`; }
+
+// Inizializza loghi appena il DOM è pronto
+document.addEventListener('DOMContentLoaded',()=>{
+  const tl=$('tb-logo'); if(tl) tl.innerHTML=logoHTML(true);
+  const ll=$('login-logo'); if(ll) ll.innerHTML=logoHTML(false);
+});
 /* ══════════════════════════════════════════
    CONFIG — inserire URL e chiave Supabase
 ══════════════════════════════════════════ */
@@ -574,21 +580,17 @@ function renderCal(pb){
   });
 }
 
-/* ── Modal aggiungi evento riga SEDE (solo chiusura o nota sede) ── */
+/* ── Modal aggiungi evento riga SEDE (chiusura o nota sede) ── */
 function openAddEvSede(data,sedeId){
-  // Controlla se c'è già un evento di tipo chiusura o nota su questa data/sede
   const existing=S.eventi.find(e=>e.data===data&&e.sede_id===sedeId&&(e.tipo==='chiusura'||e.tipo==='nota')&&!e.utente_id);
-  // nota senza utente = nota di sede (utente_id null)
-  // ma ora nota è per utente... quindi in riga SEDE gestiamo solo chiusura
-  // Se c'è già un evento lo mostriamo in detail
   if(existing){ openDetailEv(existing,sedeId); return; }
-
   let tipo='chiusura';
   const body=`
     <div class="fg"><div class="fl">Data</div><input class="fi" id="ed" type="date" value="${data}" style="font-family:monospace" readonly/></div>
     <div class="fg"><div class="fl">Tipo evento</div>
       <div id="etb" style="display:flex;gap:7px">
         <button class="btn bsm etb-btn" data-t="chiusura" style="background:var(--navy);color:#fff;border:1px solid transparent">🔒 Chiusura</button>
+        <button class="btn bsm etb-btn" data-t="nota" style="background:var(--g100);color:var(--g700);border:1px solid var(--g200)">📝 Nota</button>
       </div>
     </div>
     <div class="fg"><div class="fl">Note (opzionale)</div><textarea class="fta" id="en" placeholder="Es. Festività, manutenzione…"></textarea></div>`;
@@ -597,13 +599,22 @@ function openAddEvSede(data,sedeId){
     {l:'✅ Salva',c:'bp',a:async()=>{
       const n=$('en').value.trim();
       try{
-        const [ev]=await db('POST',T('calendario'),{body:{data,tipo:'chiusura',utente_id:null,sede_id:sedeId,durata:'intera',note:n,created_by:S.user.id}});
+        const [ev]=await db('POST',T('calendario'),{body:{data,tipo,utente_id:null,sede_id:sedeId,durata:'intera',note:n,created_by:S.user.id}});
         S.eventi.push(ev);
-        logAct('calendario_insert',`Chiusura sede: ${data}`);
-        closeM();renderPage();toast('Chiusura aggiunta ✅');
+        logAct('calendario_insert',`${TIPO[tipo]?.l||tipo} sede: ${data}`);
+        closeM();renderPage();toast('Evento aggiunto ✅');
       }catch(e){toast(e.message,'err');}
     }},
   ]);
+  const ref=()=>{
+    document.querySelectorAll('.etb-btn').forEach(b=>{
+      b.style.background=b.dataset.t===tipo?'var(--navy)':'var(--g100)';
+      b.style.color=b.dataset.t===tipo?'#fff':'var(--g700)';
+      b.style.borderColor=b.dataset.t===tipo?'transparent':'var(--g200)';
+    });
+  };
+  document.querySelectorAll('.etb-btn').forEach(b=>b.addEventListener('click',()=>{tipo=b.dataset.t;ref();}));
+  ref();
 }
 
 /* ── Modal aggiungi evento ── */
