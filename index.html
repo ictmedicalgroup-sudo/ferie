@@ -24,29 +24,45 @@
 body{background:var(--g50);color:var(--g900);min-height:100vh;font-size:14px}
 
 /* ── Layout ── */
-#app{display:flex;min-height:100vh}
-#sidebar{width:230px;flex-shrink:0;background:var(--navy);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100}
-#main{margin-left:230px;flex:1;display:flex;flex-direction:column;min-height:100vh}
-
-/* ── Sidebar ── */
-.sb-logo{padding:22px 18px 18px;border-bottom:1px solid rgba(255,255,255,.1)}
-.sb-icon{width:36px;height:36px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:9px}
-.sb-tag{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.4)}
-.sb-title{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.3px;margin-top:2px}
-.sb-nav{flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:1px;overflow-y:auto}
-.sb-sec{font-size:9px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:rgba(255,255,255,.28);padding:10px 8px 4px}
-.nb{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:var(--rsm);color:rgba(255,255,255,.58);font-size:13px;font-weight:500;font-family:'Raleway',sans-serif;cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:all .17s}
-.nb:hover{background:rgba(255,255,255,.08);color:#fff}
-.nb.active{background:rgba(157,191,96,.35);color:#fff}
-.nb-ic{font-size:15px;width:18px;text-align:center}
-.sb-foot{padding:14px 10px;border-top:1px solid rgba(255,255,255,.1)}
-.sb-un{font-size:13px;font-weight:600;color:rgba(255,255,255,.75);margin-bottom:3px}
-.sb-ur{font-size:11px;margin-bottom:8px}
+#app{display:flex;flex-direction:column;min-height:100vh}
+#sidebar{display:none} /* non usata, sostituita da topbar */
+#main{flex:1;display:flex;flex-direction:column;min-height:100vh}
 
 /* ── Topbar ── */
-#topbar{background:#fff;border-bottom:1px solid var(--g200);padding:0 26px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:var(--sh-sm)}
-#tb-title{font-size:17px;font-weight:700}
-.tb-r{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--g500)}
+#topbar{
+  background:#fff;border-bottom:1px solid var(--g200);
+  padding:0 28px;
+  display:flex;flex-direction:column;
+  position:sticky;top:0;z-index:100;box-shadow:var(--sh-sm);
+}
+#tb-top{
+  height:52px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--g100);
+}
+#tb-logo{display:flex;align-items:center;gap:11px}
+#tb-logo-circle{width:30px;height:30px;border-radius:50%;border:2px solid var(--g300);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#tb-logo-dot{width:9px;height:9px;border-radius:50%;background:var(--g300)}
+#tb-logo-text{line-height:1.2}
+#tb-logo-name{font-size:12px;font-weight:800;letter-spacing:2.5px;color:var(--g700);text-transform:uppercase}
+#tb-logo-sub{font-size:7px;font-weight:600;letter-spacing:1.8px;color:var(--g500);text-transform:uppercase;margin-top:1px}
+#tb-right{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--g500)}
+#tb-user{font-weight:600;color:var(--g700);font-size:13px}
+#tb-date{font-size:12px;color:var(--g500)}
+
+/* ── Navbar orizzontale ── */
+#tb-nav{height:40px;display:flex;align-items:stretch;gap:0}
+.tnb{
+  display:flex;align-items:center;gap:6px;
+  padding:0 16px;font-size:12.5px;font-weight:600;
+  color:var(--g500);cursor:pointer;border:none;background:none;
+  font-family:'Raleway',sans-serif;letter-spacing:.3px;
+  border-bottom:2.5px solid transparent;transition:all .17s;
+  text-transform:uppercase;
+}
+.tnb:hover{color:var(--g700);border-bottom-color:var(--g300)}
+.tnb.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tnb-ic{font-size:13px}
+
 #page-body{padding:24px;flex:1}
 
 /* ── Cards ── */
@@ -97,10 +113,11 @@ body{background:var(--g50);color:var(--g900);min-height:100vh;font-size:14px}
 .ctbl tr{height:34px}
 .ctbl tr:hover td.chn{background:var(--g50)}
 .ctbl tr:hover td.cc{background:var(--g50)}
-.crow-cl td.chn{color:var(--red);font-size:12px;font-weight:700}
+.crow-cl td.chn{color:var(--g500);font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase}
 .cc{cursor:pointer;width:100%;height:100%;min-height:32px;display:flex;align-items:center;justify-content:center;transition:background .12s}
 .cc:hover{background:var(--blue-xlight)!important}
-.cc.we{background:rgba(240,242,247,.55)}.cc.td0{background:rgba(46,109,164,.05)}.cc.cld{background:rgba(192,57,43,.07)}
+.cc.we{background:rgba(240,242,247,.55)}.cc.td0{background:rgba(157,191,96,.10)}.cc.cld{background:rgba(192,57,43,.07)}
+.ctbl th.td0{background:rgba(157,191,96,.15);color:#5a7a20}
 .cd{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0}
 .dF{background:#77797a;color:#fff}.dFm{background:#a8a9aa;color:#fff}.dFp{background:#D5E3B7;color:#4A4C4D}
 .dP{background:#9DBF60;color:#fff}.dPm{background:#b8d280;color:#fff}.dPp{background:#D5E3B7;color:#4A4C4D}
@@ -212,27 +229,25 @@ input:checked+.ts2::after{transform:translateX(16px)}
 
 <!-- APP -->
 <div id="app" class="hid">
-  <aside id="sidebar">
-    <div class="sb-logo">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-        <div style="width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.5)"></div>
-        </div>
-        <div>
-          <div style="font-size:11px;font-weight:800;letter-spacing:2.5px;color:rgba(255,255,255,.9);text-transform:uppercase">MEDICAL<span style="font-weight:300">GROUP</span></div>
-          <div style="font-size:7px;font-weight:600;letter-spacing:1.8px;color:rgba(255,255,255,.45);text-transform:uppercase;margin-top:1px">GESTIONE FERIE</div>
+  <div id="topbar">
+    <div id="tb-top">
+      <div id="tb-logo">
+        <div id="tb-logo-circle"><div id="tb-logo-dot"></div></div>
+        <div id="tb-logo-text">
+          <div id="tb-logo-name">MEDICAL<span style="font-weight:300">GROUP</span></div>
+          <div id="tb-logo-sub">GESTIONE FERIE</div>
         </div>
       </div>
+      <div id="tb-right">
+        <span id="tb-date"></span>
+        <span id="tb-user">—</span>
+        <span id="tb-role"></span>
+        <button class="btn bs" style="padding:4px 12px;font-size:12px" id="lout">Esci</button>
+      </div>
     </div>
-    <nav class="sb-nav" id="sbnav"></nav>
-    <div class="sb-foot">
-      <div class="sb-un" id="sbun">—</div>
-      <div class="sb-ur" id="sbur"></div>
-      <button class="nb" id="lout"><span class="nb-ic">🚪</span>Esci</button>
-    </div>
-  </aside>
+    <nav id="tb-nav"></nav>
+  </div>
   <main id="main">
-    <div id="topbar"><span id="tbt">—</span><div class="tb-r"><span id="tbd"></span></div></div>
     <div id="pb"></div>
   </main>
 </div>
@@ -281,7 +296,7 @@ const NAV    = [
   {id:'calendario', l:'Calendario',      ic:'📅', sec:'principale'},
   {id:'sedi',       l:'Sedi',            ic:'🏢', sec:'principale',  r:['admin']},
   {id:'utenti',     l:'Utenti',          ic:'👥', sec:'principale',  r:['admin','admin_sede']},
-  {id:'email',      l:'Email riepilogo', ic:'📧', sec:'impostazioni', r:['admin','admin_sede']},
+  {id:'email',      l:'E-Mail',     ic:'📧', sec:'impostazioni', r:['admin','admin_sede']},
   {id:'log',        l:'Log',             ic:'📋', sec:'impostazioni', r:['admin']},
 ];
 const LOG_IC = {login:'🔐',logout:'🚪',calendario_insert:'📅',calendario_delete:'🗑',utente_create:'👤',sede_create:'🏢',email_inviata:'📧'};
@@ -392,23 +407,17 @@ async function loadEventi(){
 ══════════════════════════════════════════ */
 function renderSidebar(){
   const items=NAV.filter(n=>!n.r||n.r.includes(S.user?.ruolo));
-  const secs=[...new Set(items.map(n=>n.sec))];
-  $('sbnav').innerHTML=secs.map(sec=>`
-    <div class="sb-sec">${sec}</div>
-    ${items.filter(n=>n.sec===sec).map(n=>`
-      <button class="nb${S.page===n.id?' active':''}" data-pg="${n.id}">
-        <span class="nb-ic">${n.ic}</span>${n.l}
-      </button>`).join('')}
-  `).join('');
-  $('sbnav').querySelectorAll('.nb[data-pg]').forEach(b=>b.addEventListener('click',()=>goPage(b.dataset.pg)));
-  $('sbun').textContent=S.user?`${S.user.nome} ${S.user.cognome}`:'—';
-  $('sbur').innerHTML=S.user?bRuolo(S.user.ruolo):'';
+  $('tb-nav').innerHTML=items.map(n=>`
+    <button class="tnb${S.page===n.id?' active':''}" data-pg="${n.id}">
+      <span class="tnb-ic">${n.ic}</span>${n.l}
+    </button>`).join('');
+  $('tb-nav').querySelectorAll('.tnb[data-pg]').forEach(b=>b.addEventListener('click',()=>goPage(b.dataset.pg)));
+  $('tb-user').textContent=S.user?`${S.user.nome} ${S.user.cognome}`:'—';
+  $('tb-role').innerHTML=S.user?bRuolo(S.user.ruolo):'';
 }
 
 function goPage(pg){
   S.page=pg;
-  const n=NAV.find(x=>x.id===pg);
-  $('tbt').textContent=n?.l||pg;
   renderSidebar();
   renderPage();
 }
@@ -451,7 +460,7 @@ function renderCal(pb){
   const eMap={}; ev.forEach(e=>{ const d=parseInt(e.data.slice(8,10)); if(!eMap[d])eMap[d]=[]; eMap[d].push(e); });
   const closed=new Set(ev.filter(e=>e.tipo==='chiusura').map(e=>parseInt(e.data.slice(8,10))));
   const utenti=S.utenti.filter(u=>u.sedi.includes(sId));
-  const rows=[{id:'__c__',cl:true,lbl:'🔒 Chiusura sede'},...utenti.map(u=>({...u,lbl:`${u.nome} ${u.cognome}`}))];
+  const rows=[{id:'__c__',cl:true,lbl:'SEDE'},...utenti.map(u=>({...u,lbl:`${u.cognome} ${u.nome}`}))];
 
   const thDays=Array.from({length:nd},(_,i)=>{
     const d=i+1,we=isWE(y,m,d),td=isTd(y,m,d);
@@ -527,7 +536,7 @@ function renderCal(pb){
       </div>
       <div class="cscr">
         <table class="ctbl">
-          <thead><tr><th class="chn">Dipendente</th>${thDays}</tr></thead>
+          <thead><tr><th class="chn">Utente</th>${thDays}</tr></thead>
           <tbody>${trs}</tbody>
         </table>
       </div>
@@ -550,10 +559,51 @@ function renderCal(pb){
       if(!isAdm) return;
       const d=parseInt(c.dataset.d),eid=c.dataset.e;
       const data=`${y}-${p2(m+1)}-${p2(d)}`;
-      if(eid){ const e=S.eventi.find(x=>x.id===eid); if(e) openDetailEv(e,sId); }
-      else openAddEv(data,c.dataset.cl==='1'?null:(c.dataset.u||null),sId);
+      const isSede=c.dataset.cl==='1';
+      if(eid){
+        const e=S.eventi.find(x=>x.id===eid); if(e) openDetailEv(e,sId);
+      } else {
+        if(isSede){
+          // riga SEDE: apre modal con solo chiusura/nota
+          openAddEvSede(data,sId);
+        } else {
+          openAddEv(data,c.dataset.u||null,sId);
+        }
+      }
     });
   });
+}
+
+/* ── Modal aggiungi evento riga SEDE (solo chiusura o nota sede) ── */
+function openAddEvSede(data,sedeId){
+  // Controlla se c'è già un evento di tipo chiusura o nota su questa data/sede
+  const existing=S.eventi.find(e=>e.data===data&&e.sede_id===sedeId&&(e.tipo==='chiusura'||e.tipo==='nota')&&!e.utente_id);
+  // nota senza utente = nota di sede (utente_id null)
+  // ma ora nota è per utente... quindi in riga SEDE gestiamo solo chiusura
+  // Se c'è già un evento lo mostriamo in detail
+  if(existing){ openDetailEv(existing,sedeId); return; }
+
+  let tipo='chiusura';
+  const body=`
+    <div class="fg"><div class="fl">Data</div><input class="fi" id="ed" type="date" value="${data}" style="font-family:monospace" readonly/></div>
+    <div class="fg"><div class="fl">Tipo evento</div>
+      <div id="etb" style="display:flex;gap:7px">
+        <button class="btn bsm etb-btn" data-t="chiusura" style="background:var(--navy);color:#fff;border:1px solid transparent">🔒 Chiusura</button>
+      </div>
+    </div>
+    <div class="fg"><div class="fl">Note (opzionale)</div><textarea class="fta" id="en" placeholder="Es. Festività, manutenzione…"></textarea></div>`;
+  openM(`📅 Evento sede`,body,[
+    {l:'Annulla',c:'bs',a:closeM},
+    {l:'✅ Salva',c:'bp',a:async()=>{
+      const n=$('en').value.trim();
+      try{
+        const [ev]=await db('POST',T('calendario'),{body:{data,tipo:'chiusura',utente_id:null,sede_id:sedeId,durata:'intera',note:n,created_by:S.user.id}});
+        S.eventi.push(ev);
+        logAct('calendario_insert',`Chiusura sede: ${data}`);
+        closeM();renderPage();toast('Chiusura aggiunta ✅');
+      }catch(e){toast(e.message,'err');}
+    }},
+  ]);
 }
 
 /* ── Modal aggiungi evento ── */
@@ -567,7 +617,7 @@ function openAddEv(data,uDefault,sedeId){
         ${Object.entries(TIPO).map(([k,v])=>`<button class="btn bsm etb-btn" data-t="${k}" style="background:${k===tipo?'var(--navy)':'var(--g100)'};color:${k===tipo?'#fff':'var(--g700)'};border:1px solid ${k===tipo?'transparent':'var(--g200)'}">${v.e} ${v.l}</button>`).join('')}
       </div>
     </div>
-    <div class="fg" id="eu-fg"><div class="fl">Dipendente</div>
+    <div class="fg" id="eu-fg"><div class="fl">Utente</div>
       <select class="fse" id="eu">
         ${utenti.map(u=>`<option value="${u.id}"${u.id===uDefault?' selected':''}>${esc(u.nome+' '+u.cognome)}</option>`).join('')}
       </select>
@@ -952,7 +1002,7 @@ async function doLogin(){
     S.user=profilo;
     await loadAll();
     $('lp').classList.add('hid'); $('app').classList.remove('hid');
-    $('tbd').textContent=`📅 ${fmt(new Date())}`;
+    $('tb-date').textContent=`📅 ${fmt(new Date())}`;
     renderSidebar(); goPage('calendario');
     logAct('login','Accesso effettuato');
     toast(`Benvenuto, ${S.user.nome}! ✅`);
