@@ -899,7 +899,7 @@ function openUtenteM(u){
 function renderEmail(pb){
   const today=new Date();
   pb.innerHTML=`<div class="fi-an">
-    <div class="alert ai" style="margin-bottom:18px">📧 Email inviate tramite <strong>Resend</strong> via Supabase Edge Function schedulata ogni ora. Configura <code style="font-family:monospace;font-size:12px">RESEND_API_KEY</code> nelle impostazioni Supabase.</div>
+    <div class="alert ai" style="margin-bottom:18px">📧 Email inviate tramite <strong>Resend</strong> via Supabase Edge Function. Gli orari disponibili sono agli <strong>:00</strong> e <strong>:30</strong> di ogni ora (il cron gira ogni 30 minuti).</div>
     <div class="card">
       <div class="ch"><span class="ct">📧 Configurazioni email (${S.mailCfg.length})</span><button class="btn bp-green bsm" id="madd">+ Nuova configurazione</button></div>
       ${!S.mailCfg.length?`<div class="emp"><div class="emi">📧</div><div class="emt">Nessuna configurazione</div><div class="ems">Aggiungi per inviare riepiloghi automatici agli admin</div></div>`:
@@ -949,6 +949,9 @@ function renderEmail(pb){
 }
 
 function openMailM(conf){
+  const confOra = conf?.orario ? String(conf.orario).slice(0,5) : '08:00';
+  const confH = confOra.slice(0,2);
+  const confM = confOra.slice(3,5) === '30' ? '30' : '00';
   const gd=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
   const body=`
     <div class="fg"><div class="fl">Email destinatario *</div><input class="fi" id="me" type="email" value="${esc(conf?.email_destinatario||S.user?.email||'')}"/></div>
@@ -958,7 +961,18 @@ function openMailM(conf){
           <option value="giornaliera"${!conf||conf.frequenza==='giornaliera'?' selected':''}>Giornaliera</option>
           <option value="settimanale"${conf?.frequenza==='settimanale'?' selected':''}>Settimanale</option>
         </select></div>
-      <div class="fg"><div class="fl">Orario invio</div><input class="fi" id="mo" type="time" value="${conf?.orario||'08:00'}"/></div>
+      <div class="fg"><div class="fl">Orario invio</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select class="fse" id="moh" style="flex:1">
+            ${Array.from({length:24},(_,i)=>`<option value="${String(i).padStart(2,'0')}"${String(i).padStart(2,'0')===confH?' selected':''}>${String(i).padStart(2,'0')}</option>`).join('')}
+          </select>
+          <span style="font-weight:700;color:var(--g500)">:</span>
+          <select class="fse" id="mom" style="flex:1">
+            <option value="00"${confM==='00'?' selected':''}>00</option>
+            <option value="30"${confM==='30'?' selected':''}>30</option>
+          </select>
+        </div>
+      </div>
     </div>
     <div class="fg" id="mgd" style="${conf?.frequenza==='settimanale'?'':'display:none'}"><div class="fl">Giorno settimana</div>
       <select class="fse" id="mw">${gd.map((g,i)=>`<option value="${i}"${(conf?.giorno_settimana||1)===i?' selected':''}>${g}</option>`).join('')}</select></div>
@@ -970,7 +984,8 @@ function openMailM(conf){
   openM(conf?'✏ Modifica configurazione':'+ Nuova configurazione email',body,[
     {l:'Annulla',c:'bs',a:closeM},
     {l:'Salva',c:'bp',a:async()=>{
-      const em=$('me').value.trim(),fr=$('mf').value,or=$('mo').value,dw=parseInt($('mw').value),rd=parseInt($('mrd').value),ra=parseInt($('mra').value);
+      const em=$('me').value.trim(),fr=$('mf').value,dw=parseInt($('mw').value||'1'),rd=parseInt($('mrd').value),ra=parseInt($('mra').value);
+      const or=`${$('moh').value}:${$('mom').value}:00`;
       if(!em){toast('Inserisci un indirizzo email','err');return;}
       try{
         const pl={email_destinatario:em,frequenza:fr,orario:or,giorno_settimana:dw,range_da:rd,range_a:ra,attiva:true,admin_id:S.user.id};
