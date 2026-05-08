@@ -866,9 +866,9 @@ function renderUtenti(pb){
   </div></div>`;
 
   const rr=q=>{
-    const fl=S.utenti.filter(u=>`${u.nome} ${u.cognome} ${u.email}`.toLowerCase().includes(q.toLowerCase()));
+    const fl=S.utenti.filter(u=>`${u.cognome} ${u.nome} ${u.email}`.toLowerCase().includes(q.toLowerCase()));
     $('utbody').innerHTML=fl.map(u=>`<tr>
-      <td><div class="tn">${esc(u.nome+' '+u.cognome)}</div><div class="ts">${esc(u.email)}</div></td>
+      <td><div class="tn">${esc(u.cognome+' '+u.nome)}</div><div class="ts">${esc(u.email)}</div></td>
       <td>${bRuolo(u.ruolo)}</td>
       <td><div style="display:flex;gap:4px;flex-wrap:wrap">${(u.sedi||[]).map(sid=>sedeDot(sid)).join('')}</div></td>
       <td><span class="bg ${u.attivo?'bg-on':'bg-off'}">${u.attivo?'● Attivo':'○ Inattivo'}</span></td>
