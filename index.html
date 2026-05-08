@@ -472,8 +472,8 @@ function renderCal(pb){
   const isAdm=S.user?.ruolo==='admin'||S.user?.ruolo==='admin_sede';
   const pfx=`${y}-${p2(m+1)}-`;
 
-  // Sedi visibili: admin vede tutte, utente solo le sue
-  const sediVisibili = isAdm
+  // Sedi visibili: admin vede tutte, admin_sede solo le sue, utente solo le sue
+  const sediVisibili = S.user?.ruolo==='admin'
     ? S.sedi.filter(s=>s.attiva)
     : S.sedi.filter(s=>s.attiva && (S.user?.sedi||[]).includes(s.id));
 
