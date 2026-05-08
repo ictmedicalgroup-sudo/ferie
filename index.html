@@ -970,7 +970,7 @@ function openUtenteM(u){
 function renderEmail(pb){
   const today=new Date();
   pb.innerHTML=`<div class="fi-an">
-    <div class="alert ai" style="margin-bottom:18px">📧 Email inviate tramite <strong>Resend</strong> via Supabase Edge Function. Gli orari disponibili sono agli <strong>:00</strong> e <strong>:30</strong> di ogni ora (il cron gira ogni 30 minuti).</div>
+    <div class="alert ai" style="margin-bottom:18px">📧 Email inviate tramite <strong>Brevo</strong> via Supabase Edge Function. Gli orari disponibili sono agli <strong>:00</strong> e <strong>:30</strong> di ogni ora (il cron gira ogni 30 minuti).</div>
     <div class="card">
       <div class="ch"><span class="ct">📧 Configurazioni email (${S.mailCfg.length})</span><button class="btn bp-green bsm" id="madd">+ Nuova configurazione</button></div>
       ${!S.mailCfg.length?`<div class="emp"><div class="emi">📧</div><div class="emt">Nessuna configurazione</div><div class="ems">Aggiungi per inviare riepiloghi automatici agli admin</div></div>`:
