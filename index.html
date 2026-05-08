@@ -120,7 +120,6 @@ body{background:var(--g50);color:var(--g900);min-height:100vh;font-size:14px}
 .dC{background:#C0392B;color:#fff;border-radius:3px;width:100%;height:100%;font-size:11px}
 .dM{background:#8E44AD;color:#fff}.dMm{background:#b07cc6;color:#fff}.dMp{background:#b07cc6;color:#fff}
 .dN{background:#E8A838;color:#fff}
-.dB{background:#C0392B;color:#fff}
 
 /* ── Tables ── */
 .dt{width:100%;border-collapse:collapse;font-size:13px}
@@ -290,9 +289,9 @@ const T = n => `ferie_${n}`;   // prefisso tabelle
 ══════════════════════════════════════════ */
 const S = {
   user: null, token: null,
-  sedi: [], utenti: [], eventi: [], log: [], mailCfg: [], tipi: [],
+  sedi: [], utenti: [], eventi: [], log: [], mailCfg: [],
   page: 'calendario',
-  cal: { y: new Date().getFullYear(), m: new Date().getMonth(), sid: null, tipoFiltro: '' },
+  cal: { y: new Date().getFullYear(), m: new Date().getMonth(), sid: null },
 };
 
 /* ══════════════════════════════════════════
@@ -300,13 +299,12 @@ const S = {
 ══════════════════════════════════════════ */
 const MESI   = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const GIORNI = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-const TIPO = { ferie:{l:'Ferie',e:'🌴'}, permesso:{l:'Permesso',e:'⏰'}, chiusura:{l:'Chiusura',e:'🔒'}, malattia:{l:'Malattia',e:'🤒'}, nota:{l:'Nota',e:'📝'}, maternita:{l:'Maternità',e:'🤰'} };
+const TIPO = { ferie:{l:'Ferie',e:'🌴'}, permesso:{l:'Permesso',e:'⏰'}, chiusura:{l:'Chiusura',e:'🔒'}, malattia:{l:'Malattia',e:'🤒'}, nota:{l:'Nota',e:'📝'} };
 const DURATA = { intera:'Intera giornata', mattina:'Solo mattina', pomeriggio:'Solo pomeriggio' };
 const RUOLO  = { admin:{l:'Admin'}, admin_sede:{l:'Admin Sede'}, utente:{l:'Utente'} };
 const NAV    = [
   {id:'calendario', l:'Calendario',      ic:'📅', sec:'principale'},
   {id:'sedi',       l:'Sedi',            ic:'🏢', sec:'principale',  r:['admin']},
-  {id:'tipi',       l:'Tipi',            ic:'🏷', sec:'principale',  r:['admin']},
   {id:'utenti',     l:'Utenti',          ic:'👥', sec:'principale',  r:['admin','admin_sede']},
   {id:'email',      l:'E-Mail',     ic:'📧', sec:'impostazioni', r:['admin','admin_sede']},
   {id:'log',        l:'Log',             ic:'📋', sec:'impostazioni', r:['admin']},
@@ -389,14 +387,13 @@ async function logAct(azione,dettaglio){
 async function loadAll(){
   const m=S.cal.m, y=S.cal.y;
   const from=`${y}-${p2(m)}-01`, to=`${y}-${p2(m+2)}-01`; // ±1 mese per buffer
-  const [sedi,utenti,eventi,log,mail,assoc,tipi] = await Promise.all([
+  const [sedi,utenti,eventi,log,mail,assoc] = await Promise.all([
     db('GET',T('sedi'),{ord:'nome.asc'}),
     db('GET',T('profili'),{ord:'cognome.asc'}),
     db('GET',T('calendario'),{flt:`data=gte.${y}-${p2(m+1)}-01&data=lte.${y}-${p2(m+1)}-${dim(y,m)}`,ord:'data.asc'}),
     db('GET',T('log'),{ord:'created_at.desc',lim:'200'}),
     db('GET',T('mail_config'),{ord:'created_at.asc'}),
     db('GET',T('utenti_sedi')),
-    db('GET',T('tipi'),{ord:'nome.asc'}),
   ]);
   const sp={};
   (assoc||[]).forEach(a=>{ if(!sp[a.utente_id])sp[a.utente_id]=[]; sp[a.utente_id].push(a.sede_id); });
@@ -405,7 +402,6 @@ async function loadAll(){
   S.eventi  = eventi||[];
   S.log     = log||[];
   S.mailCfg = mail||[];
-  S.tipi    = tipi||[];
   if(!S.cal.sid && S.sedi.length) S.cal.sid=S.sedi[0].id;
 }
 
@@ -446,7 +442,6 @@ function renderPage(){
   pb.innerHTML=`<div style="padding:50px;text-align:center"><span class="spn" style="border-color:rgba(46,109,164,.3);border-top-color:var(--blue);width:28px;height:28px"></span></div>`;
   if     (S.page==='calendario') renderCal(pb);
   else if(S.page==='sedi')       renderSedi(pb);
-  else if(S.page==='tipi')       renderTipi(pb);
   else if(S.page==='utenti')     renderUtenti(pb);
   else if(S.page==='email')      renderEmail(pb);
   else if(S.page==='log')        renderLog(pb);
@@ -484,7 +479,7 @@ function renderCal(pb){
   // ── helper: genera le righe tbody per una sede ──
   function righePerSede(sedeObj){
     const sid2=sedeObj.id;
-    const tipoFiltro=S.cal.tipoFiltro||''; let utentiS=S.utenti.filter(u=>u.sedi.includes(sid2)&&(u.calendario_sedi||u.sedi).includes(sid2)); if(tipoFiltro) utentiS=utentiS.filter(u=>u.tipo_id===tipoFiltro);
+    const utentiS=S.utenti.filter(u=>u.sedi.includes(sid2)&&(u.calendario_sedi||u.sedi).includes(sid2));
     const utentiIds=new Set(utentiS.map(u=>u.id));
     const evS=S.eventi.filter(e=>e.data.startsWith(pfx)&&e.sede_id===sid2&&!e.utente_id);
     const evU=S.eventi.filter(e=>e.data.startsWith(pfx)&&e.utente_id&&utentiIds.has(e.utente_id));
@@ -496,7 +491,6 @@ function renderCal(pb){
       if(!ev2) return '';
       if(ev2.tipo==='chiusura') return `<div class="cd dC">✕</div>`;
       if(ev2.tipo==='nota') return `<div class="cd dN">N</div>`;
-      if(ev2.tipo==='maternita') return `<div class="cd dB">B</div>`;
       const dc=ev2.tipo==='ferie'
         ?(ev2.durata==='mattina'?'dFm':ev2.durata==='pomeriggio'?'dFp':'dF')
         :ev2.tipo==='permesso'
@@ -553,7 +547,7 @@ function renderCal(pb){
   const sediDaMostrare = isAdm ? [sede].filter(Boolean) : sediVisibili;
   const trs = sediDaMostrare.map(s=>righePerSede(s)).join('');
 
-  const legItem=(cls,lbl)=>`<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd ${cls}" style="width:16px;height:16px;font-size:8px;flex-shrink:0">${cls==='dC'?'✕':cls==='dB'?'B':cls.startsWith('dF')?'F':cls.startsWith('dP')?'P':cls.startsWith('dM')&&cls!=='dN'?'M':'N'}</span>${lbl}</span>`;
+  const legItem=(cls,lbl)=>`<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd ${cls}" style="width:16px;height:16px;font-size:8px;flex-shrink:0">${cls==='dC'?'✕':cls.startsWith('dF')?'F':cls.startsWith('dP')?'P':cls.startsWith('dM')&&cls!=='dN'?'M':'N'}</span>${lbl}</span>`;
 
   pb.innerHTML=`<div class="fi-an">
     <div class="sg">
@@ -576,11 +570,7 @@ function renderCal(pb){
             ${sediVisibili.map(s=>`<option value="${s.id}"${s.id===sId?' selected':''}>${esc(s.nome)}</option>`).join('')}
           </select>
           ${sede?sedeDot(sede.id):''}
-          <select class="csel" id="ctipof">
-            <option value="">Tutti i tipi</option>
-            ${S.tipi.map(t=>`<option value="${t.id}"${S.cal.tipoFiltro===t.id?' selected':''}>${esc(t.nome)}</option>`).join('')}
-          </select>
-          `:''}${!isAdm&&S.tipi.length?`<select class="csel" id="ctipof"><option value="">Tutti i tipi</option>${S.tipi.map(t=>`<option value="${t.id}"${S.cal.tipoFiltro===t.id?' selected':''}>${esc(t.nome)}</option>`).join('')}</select>`:''}
+          `:''}
         </div>
         ${isAdm?`<button class="btn bp-green bsm" id="cadd">+ Aggiungi</button>`:''}
       </div>
@@ -588,7 +578,6 @@ function renderCal(pb){
         ${legItem('dF','Ferie')} ${legItem('dFm','Ferie ½')}
         ${legItem('dP','Permesso')} ${legItem('dPm','Permesso ½')}
         ${legItem('dM','Malattia')} ${legItem('dMm','Malattia ½')}
-        ${legItem('dB','Maternità')}
         ${legItem('dC','Chiusura')} ${legItem('dN','Nota')}
         <span class="clh">${isAdm?'💡 Clicca su una cella per aggiungere/vedere eventi':'👁 Solo visualizzazione'}</span>
       </div>
@@ -613,7 +602,6 @@ function renderCal(pb){
     $('csel')?.addEventListener('change',e=>{S.cal.sid=e.target.value;renderPage();});
     $('cadd')?.addEventListener('click',()=>openAddEv(null,null,sId));
   }
-  $('ctipof')?.addEventListener('change',e=>{S.cal.tipoFiltro=e.target.value;renderPage();});
 
   pb.querySelectorAll('.cc').forEach(c=>{
     c.addEventListener('click',()=>{
@@ -669,8 +657,8 @@ function openAddEvSede(data,sedeId){
 function openAddEv(data,uDefault,sedeId){
   const utenti=S.utenti.filter(u=>u.sedi.includes(sedeId)&&(u.calendario_sedi||u.sedi).includes(sedeId));
   let tipo='ferie';
+  const TIPI_RANGE=['ferie','malattia','maternita']; // tipi che supportano il range
   const body=`
-    <div class="fg"><div class="fl">Data</div><input class="fi" id="ed" type="date" value="${data||todayStr()}" style="font-family:monospace"/></div>
     <div class="fg"><div class="fl">Tipo evento</div>
       <div id="etb" style="display:flex;gap:7px;flex-wrap:wrap">
         ${Object.entries(TIPO).map(([k,v])=>`<button class="btn bsm etb-btn" data-t="${k}" style="background:${k===tipo?'var(--navy)':'var(--g100)'};color:${k===tipo?'#fff':'var(--g700)'};border:1px solid ${k===tipo?'transparent':'var(--g200)'}">${v.e} ${v.l}</button>`).join('')}
@@ -678,39 +666,95 @@ function openAddEv(data,uDefault,sedeId){
     </div>
     <div class="fg" id="eu-fg"><div class="fl">Utente</div>
       <select class="fse" id="eu">
-        ${utenti.map(u=>`<option value="${u.id}"${u.id===uDefault?' selected':''}>${esc(u.nome+' '+u.cognome)}</option>`).join('')}
+        ${utenti.map(u=>`<option value="${u.id}"${u.id===uDefault?' selected':''}>${esc(u.cognome+' '+u.nome)}</option>`).join('')}
       </select>
     </div>
-    <div class="fg" id="edr-fg"><div class="fl">Durata</div>
+    <div class="fg" id="edr-fg"><div class="fl">Durata giornaliera</div>
       <select class="fse" id="edr">
         ${Object.entries(DURATA).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}
       </select>
     </div>
+    <div id="erange-fg" style="display:none">
+      <div style="font-size:11px;font-weight:700;color:var(--g700);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Periodo</div>
+      <div class="fr">
+        <div class="fg"><div class="fl">Data inizio</div><input class="fi" id="ed" type="date" value="${data||todayStr()}" style="font-family:monospace"/></div>
+        <div class="fg"><div class="fl">Data fine</div><input class="fi" id="ed2" type="date" value="${data||todayStr()}" style="font-family:monospace"/></div>
+      </div>
+      <div class="alert ai" id="erange-info" style="font-size:12px;margin-top:4px">💡 Seleziona date diverse per inserire l'evento su più giorni</div>
+    </div>
+    <div class="fg" id="edata-fg"><div class="fl">Data</div><input class="fi" id="ed-single" type="date" value="${data||todayStr()}" style="font-family:monospace"/></div>
     <div class="fg"><div class="fl">Note (opzionale)</div><textarea class="fta" id="en" placeholder="Es. Visita medica, ferie estive…"></textarea></div>`;
   openM(`📅 Nuovo evento`,body,[
     {l:'Annulla',c:'bs',a:closeM},
     {l:'✅ Salva',c:'bp',a:async()=>{
-      const d=$('ed').value,t=tipo,n=$('en').value.trim();
+      const t=tipo,n=$('en').value.trim();
       const dr=t==='nota'||t==='chiusura'||t==='maternita'?'intera':($('edr').value||'intera');
       const u=t==='chiusura'?null:($('eu').value||null);
-      if(!d){toast('Seleziona una data','err');return;}
-      if(t!=='chiusura'&&!u){toast('Seleziona un dipendente','err');return;}      try{
-        const [ev]=await db('POST',T('calendario'),{body:{data:d,tipo:t,utente_id:u,sede_id:sedeId,durata:dr,note:n,created_by:S.user.id}});
-        S.eventi.push(ev);
-        logAct('calendario_insert',`${TIPO[t]?.l||t}: ${d} — ${u?uNome(u):t==='chiusura'?'Chiusura sede':'Nota'}`);
-        closeM();renderPage();toast('Evento aggiunto ✅');
+      if(t!=='chiusura'&&!u){toast('Seleziona un dipendente','err');return;}
+
+      const usaRange=TIPI_RANGE.includes(t);
+      const dInizio=usaRange?($('ed')?.value):($('ed-single')?.value);
+      const dFine=usaRange?($('ed2')?.value||dInizio):dInizio;
+      if(!dInizio){toast('Seleziona una data','err');return;}
+      if(usaRange&&dFine<dInizio){toast('La data fine deve essere uguale o successiva alla data inizio','err');return;}
+
+      try{
+        // Genera tutti i giorni nel range (saltando weekend solo se giornata intera per ferie)
+        const giorni=[];
+        const cur=new Date(dInizio+'T00:00:00');
+        const fine=new Date(dFine+'T00:00:00');
+        while(cur<=fine){
+          const dow=cur.getDay();
+          // Includi tutti i giorni (anche weekend — potrebbero volerli)
+          giorni.push(cur.toISOString().slice(0,10));
+          cur.setDate(cur.getDate()+1);
+        }
+
+        // Inserimento multiplo
+        const inseriti=[];
+        for(const giorno of giorni){
+          // Salta se esiste già un evento dello stesso tipo per quell'utente in quel giorno
+          const exists=S.eventi.find(e=>e.data===giorno&&e.utente_id===u&&e.sede_id===sedeId&&e.tipo===t);
+          if(exists) continue;
+          const [ev]=await db('POST',T('calendario'),{body:{data:giorno,tipo:t,utente_id:u,sede_id:sedeId,durata:dr,note:n,created_by:S.user.id}});
+          S.eventi.push(ev);
+          inseriti.push(giorno);
+        }
+        const saltati=giorni.length-inseriti.length;
+        logAct('calendario_insert',`${TIPO[t]?.l||t}: ${dInizio}${dFine!==dInizio?'→'+dFine:''} — ${u?uNome(u):'Sede'}`);
+        closeM();renderPage();
+        toast(inseriti.length===1?'Evento aggiunto ✅':`${inseriti.length} eventi aggiunti${saltati>0?` (${saltati} già presenti saltati)`:''} ✅`);
       }catch(e){toast(e.message,'err');}
     }},
   ]);
   const ref=()=>{
     const isCl=tipo==='chiusura',isNt=tipo==='nota',isMat=tipo==='maternita';
+    const usaRange=TIPI_RANGE.includes(tipo);
     $('eu-fg').style.display=isCl?'none':'';
     $('edr-fg').style.display=(isCl||isNt||isMat)?'none':'';
+    // Mostra range o singola data
+    const rangeFg=$('erange-fg'),dataFg=$('edata-fg');
+    if(rangeFg&&dataFg){
+      rangeFg.style.display=usaRange?'':'none';
+      dataFg.style.display=usaRange?'none':'';
+    }
+    // Sync date-single ↔ range start when switching
+    if(usaRange&&$('ed-single')?.value&&$('ed')) $('ed').value=$('ed-single').value||$('ed').value;
+    if(!usaRange&&$('ed')?.value&&$('ed-single')) $('ed-single').value=$('ed').value||$('ed-single').value;
     document.querySelectorAll('.etb-btn').forEach(b=>{
       b.style.background=b.dataset.t===tipo?'var(--navy)':'var(--g100)';
       b.style.color=b.dataset.t===tipo?'#fff':'var(--g700)';
       b.style.borderColor=b.dataset.t===tipo?'transparent':'var(--g200)';
     });
+    // Aggiorna info range quando cambiano le date
+    const upd=()=>{
+      const d1=$('ed')?.value,d2=$('ed2')?.value;
+      if(!d1||!d2) return;
+      const days=Math.round((new Date(d2+'T00:00:00').getTime()-new Date(d1+'T00:00:00').getTime())/86400000)+1;
+      const info=$('erange-info');
+      if(info) info.textContent=days===1?'💡 Singolo giorno':`💡 ${days} giorni (${fmt(new Date(d1+'T00:00:00'))} → ${fmt(new Date(d2+'T00:00:00'))})`;
+    };
+    setTimeout(()=>{ $('ed')?.addEventListener('change',upd); $('ed2')?.addEventListener('change',upd); upd(); },30);
   };
   document.querySelectorAll('.etb-btn').forEach(b=>b.addEventListener('click',()=>{tipo=b.dataset.t;ref();}));
   ref();
@@ -736,65 +780,6 @@ function openDetailEv(ev,sedeId){
     closeM();renderPage();toast('Evento eliminato');
   }});
   openM(`${TIPO[ev.tipo]?.e||''} Dettaglio evento`,body,btns);
-}
-
-/* ══════════════════════════════════════════
-   PAGINA TIPI
-══════════════════════════════════════════ */
-function renderTipi(pb){
-  pb.innerHTML=`<div class="fi-an"><div class="card">
-    <div class="ch"><span class="ct">🏷 Tipi utente (${S.tipi.length})</span><button class="btn bp-green bsm" id="tadd">+ Nuovo tipo</button></div>
-    ${!S.tipi.length
-      ?`<div class="emp"><div class="emi">🏷</div><div class="emt">Nessun tipo configurato</div><div class="ems">Es. Segreteria, Fisioterapia, Medico…</div></div>`
-      :`<table class="dt"><thead><tr><th>Nome</th><th>Descrizione</th><th>Utenti</th><th>Azioni</th></tr></thead><tbody>
-      ${S.tipi.map(t=>{
-        const cnt=S.utenti.filter(u=>u.tipo_id===t.id).length;
-        return `<tr>
-          <td><div class="tn">${esc(t.nome)}</div></td>
-          <td>${t.descrizione?esc(t.descrizione):'—'}</td>
-          <td><span class="bg bg-on">${cnt}</span></td>
-          <td><div class="tda">
-            <button class="btn bs bsm" data-te="${t.id}">✏</button>
-            <button class="btn bd bsm" data-td="${t.id}">🗑</button>
-          </div></td>
-        </tr>`;
-      }).join('')}
-      </tbody></table>`}
-  </div></div>`;
-  $('tadd').addEventListener('click',()=>openTipoM(null));
-  pb.querySelectorAll('[data-te]').forEach(b=>b.addEventListener('click',()=>openTipoM(S.tipi.find(x=>x.id===b.dataset.te))));
-  pb.querySelectorAll('[data-td]').forEach(b=>b.addEventListener('click',()=>{
-    const t=S.tipi.find(x=>x.id===b.dataset.td);
-    const cnt=S.utenti.filter(u=>u.tipo_id===t?.id).length;
-    openConf(`Eliminare il tipo "${t?.nome}"?${cnt>0?` Attenzione: ${cnt} utenti sono associati a questo tipo.`:''}`,async()=>{
-      await db('DELETE',T('tipi'),{flt:`id=eq.${b.dataset.td}`});
-      S.tipi=S.tipi.filter(x=>x.id!==b.dataset.td);
-      renderPage(); toast('Tipo eliminato');
-    });
-  }));
-}
-
-function openTipoM(tipo){
-  const body=`
-    <div class="fg"><div class="fl">Nome *</div><input class="fi" id="tnome" value="${esc(tipo?.nome||'')}" placeholder="Es. Segreteria, Medico, Fisioterapia…"/></div>
-    <div class="fg"><div class="fl">Descrizione</div><input class="fi" id="tdesc" value="${esc(tipo?.descrizione||'')}"/></div>`;
-  openM(tipo?'✏ Modifica tipo':'+ Nuovo tipo',body,[
-    {l:'Annulla',c:'bs',a:closeM},
-    {l:'Salva',c:'bp',a:async()=>{
-      const nome=$('tnome').value.trim(),desc=$('tdesc').value.trim();
-      if(!nome){toast('Il nome è obbligatorio','err');return;}
-      try{
-        if(tipo){
-          await db('PATCH',T('tipi'),{flt:`id=eq.${tipo.id}`,body:{nome,descrizione:desc}});
-          S.tipi=S.tipi.map(x=>x.id===tipo.id?{...x,nome,descrizione:desc}:x);
-        }else{
-          const [nt]=await db('POST',T('tipi'),{body:{nome,descrizione:desc}});
-          S.tipi.push(nt);
-        }
-        closeM();renderPage();toast(tipo?'Tipo aggiornato':'Tipo aggiunto ✅');
-      }catch(e){toast(e.message,'err');}
-    }},
-  ]);
 }
 
 /* ══════════════════════════════════════════
@@ -876,16 +861,15 @@ function renderUtenti(pb){
         ${isAdm?`<button class="btn bp-green bsm" id="uadd">+ Nuovo utente</button>`:''}
       </div>
     </div>
-    <table class="dt"><thead><tr><th>Utente</th><th>Ruolo</th><th>Tipo</th><th>Sedi</th><th>Stato</th>${isAdm?'<th>Azioni</th>':''}</tr></thead>
+    <table class="dt"><thead><tr><th>Utente</th><th>Ruolo</th><th>Sedi</th><th>Stato</th>${isAdm?'<th>Azioni</th>':''}</tr></thead>
     <tbody id="utbody"></tbody></table>
   </div></div>`;
 
   const rr=q=>{
     const fl=S.utenti.filter(u=>`${u.nome} ${u.cognome} ${u.email}`.toLowerCase().includes(q.toLowerCase()));
     $('utbody').innerHTML=fl.map(u=>`<tr>
-      <td><div class="tn">${esc(u.cognome+' '+u.nome)}</div><div class="ts">${esc(u.email)}</div></td>
+      <td><div class="tn">${esc(u.nome+' '+u.cognome)}</div><div class="ts">${esc(u.email)}</div></td>
       <td>${bRuolo(u.ruolo)}</td>
-      <td>${u.tipo_id?`<span class="badge" style="background:var(--g100);color:var(--g700)">${esc(S.tipi.find(t=>t.id===u.tipo_id)?.nome||'—')}</span>`:'—'}</td>
       <td><div style="display:flex;gap:4px;flex-wrap:wrap">${(u.sedi||[]).map(sid=>sedeDot(sid)).join('')}</div></td>
       <td><span class="bg ${u.attivo?'bg-on':'bg-off'}">${u.attivo?'● Attivo':'○ Inattivo'}</span></td>
       ${isAdm?`<td><div class="tda">
@@ -921,11 +905,6 @@ function openUtenteM(u){
     </div>
     <div class="fg"><div class="fl" id="ue-lbl">Email${curRuolo==='utente'?' (opzionale)':' *'}</div><input class="fi" id="ue" type="email" value="${esc(u?.email||'')}"/></div>
     ${!u?`<div class="fg"><div class="fl">Password *</div><input class="fi" id="upw" type="password" placeholder="Minimo 6 caratteri"/></div>`:''}
-    <div class="fg"><div class="fl">Tipo</div>
-      <select class="fse" id="utipo">
-        <option value="">— Nessun tipo —</option>
-        ${S.tipi.map(t=>`<option value="${t.id}"${u?.tipo_id===t.id?' selected':''}>${esc(t.nome)}</option>`).join('')}
-      </select></div>
     <div class="fg"><div class="fl">Ruolo</div>
       <select class="fse" id="ur" onchange="
         document.getElementById('ue-lbl').textContent=this.value==='utente'?'Email (opzionale)':'Email *';
@@ -953,7 +932,6 @@ function openUtenteM(u){
     {l:'Salva',c:'bp',a:async()=>{
       const nome=$('un').value.trim(),cog=$('ucg').value.trim(),email=$('ue').value.trim();
       const ruolo=$('ur').value,attivo=$('uat').checked;
-      const tipoId=$('utipo').value||null;
       const sediSel=[...$('usg').querySelectorAll('input:checked')].map(x=>x.value);
       const calSel=(ruolo==='admin'||ruolo==='admin_sede')
         ?[...$('ucsg').querySelectorAll('input:checked')].map(x=>x.value)
@@ -962,10 +940,10 @@ function openUtenteM(u){
       if(!nome||!cog||(emailObbligatoria&&!email)){toast('Compila tutti i campi obbligatori','err');return;}
       try{
         if(u){
-          await db('PATCH',T('profili'),{flt:`id=eq.${u.id}`,body:{nome,cognome:cog,email,ruolo,attivo,calendario_sedi:calSel,tipo_id:tipoId}});
+          await db('PATCH',T('profili'),{flt:`id=eq.${u.id}`,body:{nome,cognome:cog,email,ruolo,attivo,calendario_sedi:calSel}});
           await db('DELETE',T('utenti_sedi'),{flt:`utente_id=eq.${u.id}`});
           if(sediSel.length) await db('POST',T('utenti_sedi'),{body:sediSel.map(sid=>({utente_id:u.id,sede_id:sid}))});
-          S.utenti=S.utenti.map(x=>x.id===u.id?{...x,nome,cognome:cog,email,ruolo,attivo,sedi:sediSel,calendario_sedi:calSel,tipo_id:tipoId}:x);
+          S.utenti=S.utenti.map(x=>x.id===u.id?{...x,nome,cognome:cog,email,ruolo,attivo,sedi:sediSel,calendario_sedi:calSel}:x);
         }else{
           const pwd=$('upw')?.value||'';
           if(pwd.length<6){toast('Password minimo 6 caratteri','err');return;}
@@ -976,8 +954,8 @@ function openUtenteM(u){
           });
           const data=await res.json();
           if(!data.ok) throw new Error(data.error||'Errore creazione utente');
-          if(calSel.length||tipoId) await db('PATCH',T('profili'),{flt:`id=eq.${data.user_id}`,body:{calendario_sedi:calSel,tipo_id:tipoId}});
-          S.utenti.push({id:data.user_id,nome,cognome:cog,email,ruolo,attivo:true,sedi:sediSel,calendario_sedi:calSel,tipo_id:tipoId});
+          if(calSel.length) await db('PATCH',T('profili'),{flt:`id=eq.${data.user_id}`,body:{calendario_sedi:calSel}});
+          S.utenti.push({id:data.user_id,nome,cognome:cog,email,ruolo,attivo:true,sedi:sediSel,calendario_sedi:calSel});
           logAct('utente_create',`Nuovo utente: ${nome} ${cog}`);
         }
         closeM();renderPage();toast(u?'Utente aggiornato':'Utente aggiunto ✅');
@@ -992,7 +970,7 @@ function openUtenteM(u){
 function renderEmail(pb){
   const today=new Date();
   pb.innerHTML=`<div class="fi-an">
-    <div class="alert ai" style="margin-bottom:18px">📧 Email inviate tramite <strong>Brevo</strong> via Supabase Edge Function. Gli orari disponibili sono agli <strong>:00</strong> e <strong>:30</strong> di ogni ora (il cron gira ogni 30 minuti).</div>
+    <div class="alert ai" style="margin-bottom:18px">📧 Email inviate tramite <strong>Resend</strong> via Supabase Edge Function. Gli orari disponibili sono agli <strong>:00</strong> e <strong>:30</strong> di ogni ora (il cron gira ogni 30 minuti).</div>
     <div class="card">
       <div class="ch"><span class="ct">📧 Configurazioni email (${S.mailCfg.length})</span><button class="btn bp-green bsm" id="madd">+ Nuova configurazione</button></div>
       ${!S.mailCfg.length?`<div class="emp"><div class="emi">📧</div><div class="emt">Nessuna configurazione</div><div class="ems">Aggiungi per inviare riepiloghi automatici agli admin</div></div>`:
