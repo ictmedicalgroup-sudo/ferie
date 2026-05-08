@@ -706,7 +706,7 @@ function openAddEv(data,uDefault,sedeId){
         while(cur<=fine){
           const dow=cur.getDay();
           // Includi tutti i giorni (anche weekend — potrebbero volerli)
-          giorni.push(cur.toISOString().slice(0,10));
+          giorni.push(`${cur.getFullYear()}-${p2(cur.getMonth()+1)}-${p2(cur.getDate())}`);
           cur.setDate(cur.getDate()+1);
         }
 
