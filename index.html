@@ -1,236 +1,1360 @@
-// Supabase Edge Function: ferie-manage-user
-// Deploy: supabase functions deploy ferie-manage-user --no-verify-jwt
-// Segreti richiesti: SERVICE_ROLE_KEY
-//
-// Actions disponibili:
-//   check_email   → verifica se l'email esiste già in Supabase Auth
-//   create        → crea profilo + sedi; se l'email non esiste in Auth la crea prima
-//   update        → aggiorna profilo, sedi e (opzionalmente) password
-//   delete_profile→ elimina SOLO il profilo e le associazioni sedi (non l'utente Auth)
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ferie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  /* Colori aziendali Medical Group */
+  --navy:#4A4C4D;--blue:#77797a;--blue-mid:#9DBF60;--blue-light:#D5E3B7;--blue-xlight:#EEF5E3;
+  --accent:#9DBF60;--accent-light:#EEF5E3;
+  --red:#C0392B;--red-light:#FDECEA;--green:#9DBF60;--green-light:#EEF5E3;
+  --purple:#8E44AD;--purple-light:#F4EAF9;
+  --g50:#F8F9F8;--g100:#F0F2EE;--g200:#E2E6DF;--g300:#C8CEC4;
+  --g500:#77797a;--g700:#4A4C4D;--g900:#2A2C2D;
+  --sh-sm:0 1px 3px rgba(74,76,77,.08),0 1px 2px rgba(74,76,77,.05);
+  --sh-md:0 4px 12px rgba(74,76,77,.10);--sh-lg:0 12px 32px rgba(74,76,77,.14),0 4px 10px rgba(74,76,77,.07);
+  --r:10px;--rsm:6px;--rlg:16px;
+  --verde:#9DBF60;--grigio:#77797a;--grigio-chiaro:#aaaaaa;
+  font-family:'Raleway',sans-serif;
+}
+body{background:var(--g50);color:var(--g900);min-height:100vh;font-size:14px}
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+/* ── Layout ── */
+#app{display:flex;flex-direction:column;min-height:100vh}
+#sidebar{display:none}
+#main{flex:1;display:flex;flex-direction:column;min-height:100vh}
 
-const CORS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+/* ── Topbar ── */
+#topbar{
+  background:#fff;border-bottom:1px solid var(--g200);
+  padding:0 28px;
+  display:flex;flex-direction:column;
+  position:sticky;top:0;z-index:100;box-shadow:var(--sh-sm);
+}
+#tb-top{
+  height:52px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--g100);
+}
+#tb-logo{display:flex;align-items:center}
+#tb-right{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--g500)}
+#tb-user{font-weight:600;color:var(--g700);font-size:13px}
+#tb-date{font-size:12px;color:var(--g500)}
+
+/* ── Navbar orizzontale ── */
+#tb-nav{height:40px;display:flex;align-items:stretch;gap:0}
+.tnb{
+  display:flex;align-items:center;gap:6px;
+  padding:0 16px;font-size:12.5px;font-weight:600;
+  color:var(--g500);cursor:pointer;border:none;background:none;
+  font-family:'Raleway',sans-serif;letter-spacing:.3px;
+  border-bottom:2.5px solid transparent;transition:all .17s;
+  text-transform:uppercase;
+}
+.tnb:hover{color:var(--g700);border-bottom-color:var(--g300)}
+.tnb.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tnb-ic{font-size:13px}
+
+#page-body{padding:24px;flex:1}
+
+/* ── Cards ── */
+.card{background:#fff;border-radius:var(--rlg);box-shadow:var(--sh-sm);border:1px solid var(--g200);overflow:hidden;margin-bottom:20px}
+.ch{padding:15px 20px;border-bottom:1px solid var(--g200);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.ct{font-size:14px;font-weight:700}
+.cb{padding:20px}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border-radius:var(--rsm);font-family:'Raleway',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .17s;white-space:nowrap}
+.bp{background:var(--blue);color:#fff}.bp:hover{background:var(--navy)}
+.bs{background:var(--g100);color:var(--g700);border:1px solid var(--g200)}.bs:hover{background:var(--g200)}
+.bd{background:var(--red-light);color:var(--red)}.bd:hover{background:var(--red);color:#fff}
+.bsm{padding:4px 10px;font-size:12px}
+.bic{padding:6px;border-radius:var(--rsm);background:var(--g100);border:1px solid var(--g200);cursor:pointer;transition:all .17s;font-size:14px;font-family:'Raleway',sans-serif}.bic:hover{background:var(--g200)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Badges ── */
+.bg{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.bgf{background:var(--g200);color:var(--g700)}.bgp{background:var(--blue-light);color:#4A6B20}
+.bgc{background:var(--red-light);color:var(--red)}.bgm{background:var(--purple-light);color:var(--purple)}
+.bgn{background:#FEF3DC;color:#7D5A00}
+.bga{background:var(--navy);color:#fff}.bgas{background:var(--g200);color:var(--g700)}.bgu{background:var(--g100);color:var(--g500)}
+.bg-on{background:var(--green-light);color:#1A7A40}.bg-off{background:var(--g100);color:var(--g500)}
+
+/* ── Stats ── */
+.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:22px}
+.sc{background:#fff;border-radius:var(--r);padding:16px;border:1px solid var(--g200);box-shadow:var(--sh-sm);display:flex;gap:13px;align-items:center}
+.si{width:42px;height:42px;border-radius:var(--rsm);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.sl{font-size:10px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.5px}
+.sv{font-size:26px;font-weight:800;color:var(--g900);line-height:1;margin-top:2px}
+
+/* ── Calendario ── */
+.cctrls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cmn{display:flex;align-items:center;gap:8px}
+.cml{font-size:15px;font-weight:700;min-width:155px;text-align:center}
+.csel{padding:6px 11px;border:1px solid var(--g300);border-radius:var(--rsm);font-family:'Raleway',sans-serif;font-size:13px;background:#fff;outline:none;cursor:pointer;font-weight:500}
+.csel:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,109,164,.13)}
+.cleg{display:flex;gap:10px;padding:10px 16px;border-bottom:1px solid var(--g100);flex-wrap:wrap;align-items:center}
+.clh{font-size:11px;color:var(--g500);margin-left:auto}
+.cscr{overflow-x:auto}
+.ctbl{width:100%;border-collapse:collapse;min-width:860px;font-size:12px}
+.ctbl th{padding:7px 4px;text-align:center;font-weight:700;color:var(--g500);font-size:10px;letter-spacing:.4px;text-transform:uppercase;background:var(--g50);border-bottom:2px solid var(--g200);position:sticky;top:0;user-select:none}
+.ctbl th.chn{text-align:left;padding-left:14px;min-width:145px;position:sticky;left:0;background:var(--g50);z-index:2}
+.ctbl th.we{color:var(--red)}.ctbl th.td0{background:var(--blue-xlight);color:var(--blue)}
+.ctbl td{padding:0;border:1px solid var(--g200);vertical-align:top;min-width:26px;max-width:36px}
+.ctbl td.chn{padding:0 14px;min-width:145px;max-width:190px;font-weight:500;background:#fff;position:sticky;left:0;z-index:1;border-left:none;border-right:2px solid var(--g200);vertical-align:middle;font-size:12.5px}
+.ctbl tr{height:34px}
+.ctbl tr:hover td.chn{background:var(--g50)}
+.ctbl tr:hover td.cc{background:var(--g50)}
+.crow-cl td.chn{color:var(--g500);font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase}
+.cc{cursor:pointer;width:100%;height:100%;min-height:32px;display:flex;align-items:center;justify-content:center;transition:background .12s}
+.cc:hover{background:var(--blue-xlight)!important}
+.cc.we{background:rgba(240,242,247,.55)}.cc.td0{background:rgba(157,191,96,.10)}.cc.cld{background:rgba(192,57,43,.07)}
+.ctbl th.td0{background:rgba(157,191,96,.15);color:#5a7a20}
+.cd{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0}
+.dF{background:#2E6DA4;color:#fff}.dFm{background:#6699CC;color:#fff}.dFp{background:#6699CC;color:#fff}
+.dP{background:#9DBF60;color:#fff}.dPm{background:#b8d280;color:#fff}.dPp{background:#b8d280;color:#fff}
+.dC{background:#C0392B;color:#fff;border-radius:3px;width:100%;height:100%;font-size:11px}
+.dM{background:#8E44AD;color:#fff}.dMm{background:#b07cc6;color:#fff}.dMp{background:#b07cc6;color:#fff}
+.dN{background:#E8A838;color:#fff}
+.dB{background:#C0392B;color:#fff}
+
+/* ── Tables ── */
+.dt{width:100%;border-collapse:collapse;font-size:13px}
+.dt th{padding:9px 14px;text-align:left;font-size:10px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.5px;background:var(--g50);border-bottom:2px solid var(--g200)}
+.dt td{padding:10px 14px;border-bottom:1px solid var(--g100);color:var(--g700);vertical-align:middle}
+.dt tr:last-child td{border-bottom:none}.dt tr:hover td{background:var(--g50)}
+.tda{display:flex;gap:6px}
+.tn{font-weight:600;font-size:13.5px;color:var(--g900)}.ts{font-size:11.5px;color:var(--g500);margin-top:1px}
+
+/* ── Forms ── */
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.fl{font-size:11.5px;font-weight:700;color:var(--g700);text-transform:uppercase;letter-spacing:.4px}
+.fi,.fse,.fta{padding:8px 11px;border:1.5px solid var(--g300);border-radius:var(--rsm);font-family:'Raleway',sans-serif;font-size:13.5px;color:var(--g900);background:#fff;outline:none;transition:border-color .17s,box-shadow .17s;width:100%}
+.fi:focus,.fse:focus,.fta:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,109,164,.13)}
+.fta{resize:vertical;min-height:75px}.fse{cursor:pointer}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fch{display:flex;flex-wrap:wrap;gap:8px;padding:9px 12px;border:1.5px solid var(--g300);border-radius:var(--rsm);background:#fff}
+.fci{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px;font-weight:500}
+.fci input{cursor:pointer;accent-color:var(--blue)}
+
+/* ── Modal ── */
+.mo{position:fixed;inset:0;background:rgba(26,31,53,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:500;padding:20px}
+.mo.hid{display:none}
+.mb{background:#fff;border-radius:var(--rlg);box-shadow:var(--sh-lg);width:100%;max-width:450px;overflow:hidden;max-height:90vh;display:flex;flex-direction:column}
+.mh{padding:18px 20px;border-bottom:1px solid var(--g200);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.mt{font-size:15px;font-weight:700}.mbdy{padding:20px;overflow-y:auto;flex:1}.mf{padding:14px 20px;border-top:1px solid var(--g200);display:flex;gap:9px;justify-content:flex-end;flex-shrink:0}
+
+/* ── Toggle ── */
+.tw{display:flex;align-items:center;gap:9px;cursor:pointer}
+.tg{position:relative;width:36px;height:20px;flex-shrink:0}
+.tg input{opacity:0;width:0;height:0;position:absolute}
+.ts2{width:36px;height:20px;background:var(--g300);border-radius:10px;transition:background .2s;display:block;cursor:pointer}
+.ts2::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+input:checked+.ts2{background:var(--blue)}
+input:checked+.ts2::after{transform:translateX(16px)}
+
+/* ── Misc ── */
+.alert{padding:11px 15px;border-radius:var(--rsm);font-size:13px;display:flex;align-items:flex-start;gap:9px;line-height:1.5}
+.ai{background:var(--blue-xlight);color:var(--navy);border:1px solid var(--blue-light)}
+.ae{background:var(--red-light);color:var(--red);border:1px solid #F5C6C2}
+.aw{background:var(--accent-light);color:#7D5A00;border:1px solid #F5D78A}
+.emp{text-align:center;padding:44px 20px;color:var(--g500)}
+.emi{font-size:40px;margin-bottom:12px}
+.emt{font-size:14px;font-weight:600;color:var(--g700)}.ems{font-size:12.5px;margin-top:5px}
+.schip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:20px;font-size:11.5px;font-weight:600;border:1.5px solid}
+.sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.logr{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--g100);align-items:flex-start}
+.logr:last-child{border-bottom:none}
+.lic{width:30px;height:30px;border-radius:50%;background:var(--g100);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:1px}
+.lt{font-size:10.5px;color:var(--g500);font-family:monospace;margin-bottom:2px}.lx{font-size:13px;color:var(--g700);line-height:1.45}.lw{font-weight:700;color:var(--g900)}
+.mailc{border:1.5px solid var(--g200);border-radius:var(--r);overflow:hidden;background:#fff;margin-bottom:12px}
+.mch{padding:13px 17px;background:var(--g50);display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--g200);flex-wrap:wrap;gap:8px}
+.mcb{padding:14px 17px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mfl{font-size:10px;font-weight:700;color:var(--g500);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.mfv{font-size:13px;color:var(--g900);font-weight:500}
+.mprev{padding:9px 17px;background:var(--blue-xlight);border-top:1px solid var(--blue-light);font-size:11.5px;color:var(--navy)}
+.sw{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;flex-shrink:0;transition:border-color .15s}
+.sw.sel{border-color:var(--g900)}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--g300);border-radius:3px}
+.spn{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;bottom:24px;right:24px;background:var(--g900);color:#fff;padding:11px 18px;border-radius:var(--r);font-size:13.5px;font-weight:500;box-shadow:var(--sh-lg);z-index:9999;transform:translateY(60px);opacity:0;transition:all .25s ease;pointer-events:none;max-width:340px;line-height:1.4}
+#toast.show{transform:translateY(0);opacity:1}#toast.tok{background:#1A7A40}#toast.terr{background:var(--red)}
+.hid{display:none!important}
+.fi-an{animation:fian .25s ease}@keyframes fian{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ── Login ── */
+#lp{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--g50)}
+.lcard{background:#fff;border-radius:var(--rlg);padding:40px 38px;width:100%;max-width:420px;box-shadow:var(--sh-lg);border:1px solid var(--g200)}
+.lfield{margin-bottom:16px}
+.lfield label{display:block;font-size:12px;font-weight:600;color:var(--g700);letter-spacing:.5px;margin-bottom:6px}
+.lfield input{width:100%;padding:11px 14px;border:1px solid var(--g200);border-radius:var(--rsm);background:#EEF5E3;font-family:'Raleway',sans-serif;font-size:14px;color:var(--g900);outline:none;transition:border-color .2s}
+.lfield input:focus{border-color:var(--verde)}
+.lbtn{width:100%;padding:12px;background:var(--verde);color:#fff;border:none;border-radius:var(--rsm);font-family:'Raleway',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.lbtn:hover{opacity:.88}
+.lerr{background:var(--red-light);color:var(--red);border-radius:var(--rsm);padding:10px 14px;font-size:13px;margin-top:14px;display:none}
+.bp-green{background:#9DBF60;color:#fff;border:none}.bp-green:hover{background:#7da048}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- LOGIN -->
+<div id="lp">
+  <div class="lcard">
+    <div id="login-logo"></div>
+    <div style="margin-top:14px;font-size:13px;color:var(--grigio);text-align:center">Accesso riservato al personale autorizzato</div>
+    <div id="lerr" class="lerr"></div>
+    <div class="lfield" style="margin-top:12px;"><label>E-Mail</label><input type="email" id="lem" placeholder="nome@medicalgroup.it" autocomplete="username"/></div>
+    <div class="lfield"><label>Password</label><input type="password" id="lpw" placeholder="••••••••" autocomplete="current-password"/></div>
+    <button class="lbtn" id="lbtn">Accedi</button>
+    <div id="login-ver" style="margin-top:14px;font-size:10px;color:var(--grigio-chiaro);text-align:center;letter-spacing:.5px;"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hid">
+  <div id="topbar">
+    <div id="tb-top">
+      <div id="tb-logo"></div>
+      <div id="tb-right">
+        <span id="tb-date"></span>
+        <span id="tb-user">—</span>
+        <span id="tb-role"></span>
+        <button class="btn bs" style="padding:4px 12px;font-size:12px" id="lout">Esci</button>
+      </div>
+    </div>
+    <nav id="tb-nav"></nav>
+  </div>
+  <main id="main">
+    <div id="pb"></div>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="mo hid" id="mov">
+  <div class="mb" id="mbox">
+    <div class="mh"><span class="mt" id="mtit">—</span><button class="bic" id="mcls">✕</button></div>
+    <div class="mbdy" id="mbdy"></div>
+    <div class="mf" id="mft"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ── Logo SVG ── */
+function logoSVG(small){
+  const w=small?28:36,h=small?22:28;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 90 70" fill="none">
+    <circle cx="28" cy="22" r="19" stroke="#D5E3B7" stroke-width="3.5" fill="none"/>
+    <circle cx="40" cy="38" r="24" stroke="#77797A" stroke-width="3.5" fill="none"/>
+  </svg>`;
+}
+function logoHTML(small=false){ return `
+  <div style="display:flex;align-items:center;gap:${small?6:10}px;">
+    ${logoSVG(small)}
+    <div style="line-height:1.15;">
+      <div style="font-weight:300;font-size:${small?11:14}px;letter-spacing:4px;text-transform:uppercase;">
+        <span style="color:var(--grigio);">MEDICAL</span><span style="color:var(--verde);">GROUP</span>
+      </div>
+      <div style="font-size:9px;letter-spacing:2px;color:var(--grigio-chiaro);text-transform:uppercase;font-weight:500;">Gestione Ferie</div>
+    </div>
+  </div>`; }
+
+document.addEventListener('DOMContentLoaded',async ()=>{
+  const tl=$('tb-logo'); if(tl) tl.innerHTML=logoHTML(true);
+  const ll=$('login-logo'); if(ll) ll.innerHTML=logoHTML(false);
+  const lv=$('login-ver');const tv=$('tb-ver');
+  try{
+    const res=await fetch(`https://api.github.com/repos/ictmedicalgroup-sudo/ferie/commits?per_page=1`);
+    if(res.ok){const [c]=await res.json();const d=new Date(c.commit.committer.date);const bStr='build '+d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});if(lv)lv.textContent=bStr;if(tv)tv.textContent=bStr;}else{if(lv)lv.textContent='';if(tv)tv.textContent='';}
+  }catch(e){if(lv)lv.textContent='';if(tv)tv.textContent='';}
+});
+/* ══════════════════════════════════════════
+   CONFIG — inserire URL e chiave Supabase
+══════════════════════════════════════════ */
+const CFG = {
+  URL: 'https://iczsdqcnvauopwkuspti.supabase.co',  // ← es. https://abcdefgh.supabase.co
+  KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljenNkcWNudmF1b3B3a3VzcHRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NTQ0MjMsImV4cCI6MjA5MjQzMDQyM30.SmcRHPLM2PEq4Hn-5CQhMyQKoz0PN_0lbN_X3l9MNUE',   // ← chiave anon/public (Settings → API → anon public)
+  // URL base delle Edge Functions (uguale al progetto, non cambiare il path)
+  FN:  'https://iczsdqcnvauopwkuspti.supabase.co/functions/v1',
+};
+const T = n => `ferie_${n}`;   // prefisso tabelle
+
+/* ══════════════════════════════════════════
+   STATO
+══════════════════════════════════════════ */
+const S = {
+  user: null, token: null,
+  sedi: [], utenti: [], eventi: [], log: [], mailCfg: [], tipi: [],
+  page: 'calendario',
+  cal: { y: new Date().getFullYear(), m: new Date().getMonth(), sid: null, tipoFiltro: '' },
+};
+
+/* ══════════════════════════════════════════
+   COSTANTI
+══════════════════════════════════════════ */
+const MESI   = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const GIORNI = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+const TIPO = { ferie:{l:'Ferie',e:'🌴'}, permesso:{l:'Permesso',e:'⏰'}, chiusura:{l:'Chiusura',e:'🔒'}, malattia:{l:'Malattia',e:'🤒'}, nota:{l:'Nota',e:'📝'}, maternita:{l:'Maternità',e:'🤰'} };
+const DURATA = { intera:'Intera giornata', mattina:'Solo mattina', pomeriggio:'Solo pomeriggio' };
+const RUOLO  = { admin:{l:'Admin'}, admin_sede:{l:'Admin Sede'}, utente:{l:'Utente'} };
+const NAV    = [
+  {id:'calendario', l:'Calendario',      ic:'📅', sec:'principale'},
+  {id:'sedi',       l:'Sedi',            ic:'🏢', sec:'principale',  r:['admin']},
+  {id:'tipi',       l:'Tipi',            ic:'🏷', sec:'principale',  r:['admin']},
+  {id:'utenti',     l:'Utenti',          ic:'👥', sec:'principale',  r:['admin','admin_sede']},
+  {id:'email',      l:'E-Mail',     ic:'📧', sec:'impostazioni', r:['admin','admin_sede']},
+  {id:'log',        l:'Log',             ic:'📋', sec:'impostazioni', r:['admin']},
+];
+const LOG_IC = {login:'🔐',logout:'🚪',calendario_insert:'📅',calendario_delete:'🗑',utente_create:'👤',sede_create:'🏢',email_inviata:'📧'};
+const SWATCHES = ['#9DBF60','#77797a','#4A4C4D','#D5E3B7','#C0392B','#8E44AD','#E8A838','#16A085'];
+
+/* ══════════════════════════════════════════
+   UTILITÀ
+══════════════════════════════════════════ */
+const $  = id => document.getElementById(id);
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const uid = () => (crypto.randomUUID||(() => Math.random().toString(36).slice(2,11)))();
+
+function fmt(d){
+  if(!d) return '—';
+  const dt = typeof d==='string'?new Date(d.length===10?d+'T00:00:00':d):d;
+  return dt.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function fmtDt(d){
+  if(!d) return '—';
+  const dt = typeof d==='string'?new Date(d):d;
+  return dt.toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+function dim(y,m){ return new Date(y,m+1,0).getDate(); }
+function isWE(y,m,d){ const w=new Date(y,m,d).getDay(); return w===0||w===6; }
+function isTd(y,m,d){ const t=new Date(); return t.getFullYear()===y&&t.getMonth()===m&&t.getDate()===d; }
+function todayStr(){ const t=new Date(); return `${t.getFullYear()}-${p2(t.getMonth()+1)}-${p2(t.getDate())}`; }
+function p2(n){ return String(n).padStart(2,'0'); }
+function addDays(n,base=new Date()){ const d=new Date(base); d.setDate(d.getDate()+n); return d; }
+
+let _tid; 
+function toast(msg,type='ok'){
+  const el=$('toast'); clearTimeout(_tid);
+  el.textContent=msg; el.className=`show t${type}`;
+  _tid=setTimeout(()=>el.className='',3000);
 }
 
-const RUOLI_VALIDI = ['admin', 'admin_sede', 'utente']
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  })
+/* ══════════════════════════════════════════
+   SUPABASE REST (senza SDK)
+══════════════════════════════════════════ */
+async function db(method,table,opts={}){
+  const {flt='',body=null,sel='*',ord='',lim=''} = opts;
+  let url=`${CFG.URL}/rest/v1/${table}?select=${sel}`;
+  if(flt) url+=`&${flt}`;
+  if(ord) url+=`&order=${ord}`;
+  if(lim) url+=`&limit=${lim}`;
+  const headers={
+    'apikey':CFG.KEY,
+    'Authorization':`Bearer ${S.token||CFG.KEY}`,
+    'Content-Type':'application/json',
+    'Prefer':method==='POST'?'return=representation':method==='PATCH'?'return=representation':'',
+  };
+  const res=await fetch(url,{method,headers,body:body?JSON.stringify(body):undefined});
+  if(!res.ok){ const e=await res.text(); throw new Error(`${method} ${table}: ${e}`); }
+  return method==='DELETE'?null:res.json();
 }
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
+async function supaLogin(email,password){
+  const res=await fetch(`${CFG.URL}/auth/v1/token?grant_type=password`,{
+    method:'POST', headers:{'apikey':CFG.KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email,password}),
+  });
+  const data=await res.json();
+  if(!res.ok) throw new Error(data.error_description||data.message||'Credenziali non valide');
+  return data;
+}
 
-  try {
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-    const SERVICE_KEY  = Deno.env.get('SERVICE_ROLE_KEY')!
-    const ANON_KEY     = Deno.env.get('SUPABASE_ANON_KEY')!
+async function supaLogout(){
+  try{ await fetch(`${CFG.URL}/auth/v1/logout`,{method:'POST',headers:{'apikey':CFG.KEY,'Authorization':`Bearer ${S.token}`}}); }catch(e){}
+}
 
-    // ── Verifica chiamante autenticato e admin ──────────────────
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) throw new Error('Non autorizzato')
+async function logAct(azione,dettaglio){
+  try{ await db('POST',T('log'),{body:{utente_id:S.user?.id,azione,dettaglio}}); }catch(e){}
+}
 
-    const anonClient = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    })
-    const { data: { user: caller }, error: authErr } = await anonClient.auth.getUser()
-    if (authErr || !caller) throw new Error('Non autorizzato')
+/* ══════════════════════════════════════════
+   CARICAMENTO DATI
+══════════════════════════════════════════ */
+async function loadAll(){
+  const m=S.cal.m, y=S.cal.y;
+  const from=`${y}-${p2(m)}-01`, to=`${y}-${p2(m+2)}-01`; // ±1 mese per buffer
+  const [sedi,utenti,eventi,log,mail,assoc,tipi] = await Promise.all([
+    db('GET',T('sedi'),{ord:'nome.asc'}),
+    db('GET',T('profili'),{ord:'cognome.asc'}),
+    db('GET',T('calendario'),{flt:`data=gte.${y}-${p2(m+1)}-01&data=lte.${y}-${p2(m+1)}-${dim(y,m)}`,ord:'data.asc'}),
+    db('GET',T('log'),{ord:'created_at.desc',lim:'200'}),
+    db('GET',T('mail_config'),{ord:'created_at.asc'}),
+    db('GET',T('utenti_sedi')),
+    db('GET',T('tipi'),{ord:'nome.asc'}),
+  ]);
+  const sp={};
+  (assoc||[]).forEach(a=>{ if(!sp[a.utente_id])sp[a.utente_id]=[]; sp[a.utente_id].push(a.sede_id); });
+  S.sedi    = sedi||[];
+  S.utenti  = (utenti||[]).map(u=>({...u,sedi:sp[u.id]||[],calendario_sedi:u.calendario_sedi||sp[u.id]||[]}));
+  S.eventi  = eventi||[];
+  S.log     = log||[];
+  S.mailCfg = mail||[];
+  S.tipi    = tipi||[];
+  if(!S.cal.sid && S.sedi.length) S.cal.sid=S.sedi[0].id;
+}
 
-    const { data: callerProfile, error: profErr } = await anonClient
-      .from('ferie_profili')
-      .select('ruolo')
-      .eq('id', caller.id)
-      .single()
-    // Solo admin e admin_sede possono gestire utenti
-    if (profErr || !['admin', 'admin_sede'].includes(callerProfile?.ruolo)) {
-      throw new Error('Accesso riservato agli amministratori')
+async function loadEventi(){
+  const y=S.cal.y,m=S.cal.m;
+  // Carichiamo TUTTI gli eventi del mese (senza filtro sede)
+  // così ferie/permesso/malattia appaiono su tutte le sedi dell'utente
+  S.eventi=await db('GET',T('calendario'),{
+    flt:`data=gte.${y}-${p2(m+1)}-01&data=lte.${y}-${p2(m+1)}-${dim(y,m)}`,ord:'data.asc'
+  })||[];
+}
+
+/* ══════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════ */
+function renderSidebar(){
+  const items=NAV.filter(n=>!n.r||n.r.includes(S.user?.ruolo));
+  $('tb-nav').innerHTML=items.map(n=>`
+    <button class="tnb${S.page===n.id?' active':''}" data-pg="${n.id}">
+      <span class="tnb-ic">${n.ic}</span>${n.l}
+    </button>`).join('');
+  $('tb-nav').querySelectorAll('.tnb[data-pg]').forEach(b=>b.addEventListener('click',()=>goPage(b.dataset.pg)));
+  $('tb-user').textContent=S.user?`${S.user.nome} ${S.user.cognome}`:'—';
+  $('tb-role').innerHTML=S.user?bRuolo(S.user.ruolo):'';
+}
+
+function goPage(pg){
+  S.page=pg;
+  renderSidebar();
+  renderPage();
+}
+
+/* ══════════════════════════════════════════
+   RENDER DISPATCHER
+══════════════════════════════════════════ */
+function renderPage(){
+  const pb=$('pb');
+  pb.innerHTML=`<div style="padding:50px;text-align:center"><span class="spn" style="border-color:rgba(46,109,164,.3);border-top-color:var(--blue);width:28px;height:28px"></span></div>`;
+  if     (S.page==='calendario') renderCal(pb);
+  else if(S.page==='sedi')       renderSedi(pb);
+  else if(S.page==='tipi')       renderTipi(pb);
+  else if(S.page==='utenti')     renderUtenti(pb);
+  else if(S.page==='email')      renderEmail(pb);
+  else if(S.page==='log')        renderLog(pb);
+}
+
+/* ══════════════════════════════════════════
+   HELPERS HTML
+══════════════════════════════════════════ */
+function bTipo(t){ const c=TIPO[t]; return c?`<span class="bg bg${t==='nota'?'n':t[0]}">${c.e} ${c.l}</span>`:t; }
+function bRuolo(r){ return `<span class="bg bg${r==='admin'?'a':r==='admin_sede'?'as':'u'}">${RUOLO[r]?.l||r}</span>`; }
+function sedeDot(sid){
+  const s=S.sedi.find(x=>x.id===sid); if(!s) return '';
+  return `<span class="schip" style="border-color:${s.colore}55;background:${s.colore}18;color:${s.colore}"><span class="sdot" style="background:${s.colore}"></span>${esc(s.nome)}</span>`;
+}
+function uNome(uid){ const u=S.utenti.find(x=>x.id===uid); return u?`${u.nome} ${u.cognome}`:'—'; }
+
+/* ══════════════════════════════════════════
+   PAGINA CALENDARIO
+══════════════════════════════════════════ */
+function renderCal(pb){
+  const {y,m,sid}=S.cal;
+  const nd=dim(y,m);
+  const isAdm=S.user?.ruolo==='admin'||S.user?.ruolo==='admin_sede';
+  const pfx=`${y}-${p2(m+1)}-`;
+
+  // Sedi visibili: admin vede tutte, admin_sede solo le sue, utente solo le sue
+  const sediVisibili = S.user?.ruolo==='admin'
+    ? S.sedi.filter(s=>s.attiva)
+    : S.sedi.filter(s=>s.attiva && (S.user?.sedi||[]).includes(s.id));
+
+  // Sede corrente per admin
+  const sede=S.sedi.find(s=>s.id===sid)||sediVisibili[0];
+  const sId=sede?.id;
+
+  // ── helper: genera le righe tbody per una sede ──
+  function righePerSede(sedeObj){
+    const sid2=sedeObj.id;
+    const tipoFiltro=S.cal.tipoFiltro||''; let utentiS=S.utenti.filter(u=>u.sedi.includes(sid2)&&(u.calendario_sedi||u.sedi).includes(sid2)); if(tipoFiltro) utentiS=utentiS.filter(u=>u.tipo_id===tipoFiltro);
+    const utentiIds=new Set(utentiS.map(u=>u.id));
+    const evS=S.eventi.filter(e=>e.data.startsWith(pfx)&&e.sede_id===sid2&&!e.utente_id);
+    const evU=S.eventi.filter(e=>e.data.startsWith(pfx)&&e.utente_id&&utentiIds.has(e.utente_id));
+    const eMapS={};
+    [...evS,...evU].forEach(e=>{ const d=parseInt(e.data.slice(8,10)); if(!eMapS[d])eMapS[d]=[]; eMapS[d].push(e); });
+    const closedS=new Set(evS.filter(e=>e.tipo==='chiusura').map(e=>parseInt(e.data.slice(8,10))));
+
+    function makeDot(ev2,isCl){
+      if(!ev2) return '';
+      if(ev2.tipo==='chiusura') return `<div class="cd dC">✕</div>`;
+      if(ev2.tipo==='nota') return `<div class="cd dN">N</div>`;
+      if(ev2.tipo==='maternita') return `<div class="cd dB">B</div>`;
+      const dc=ev2.tipo==='ferie'
+        ?(ev2.durata==='mattina'?'dFm':ev2.durata==='pomeriggio'?'dFp':'dF')
+        :ev2.tipo==='permesso'
+          ?(ev2.durata==='mattina'?'dPm':ev2.durata==='pomeriggio'?'dPp':'dP')
+          :ev2.tipo==='malattia'
+            ?(ev2.durata==='mattina'?'dMm':ev2.durata==='pomeriggio'?'dMp':'dM')
+            :'dF';
+      return `<div class="cd ${dc}">${{ferie:'F',permesso:'P',malattia:'M'}[ev2.tipo]||'?'}</div>`;
     }
 
-    const admin = createClient(SUPABASE_URL, SERVICE_KEY)
-    const body  = await req.json()
-    const { action } = body
-
-    // ══════════════════════════════════════════════════════════
-    // CHECK_EMAIL
-    // ══════════════════════════════════════════════════════════
-    if (action === 'check_email') {
-      const { email } = body
-      if (!email) throw new Error('Email obbligatoria')
-
-      const { data: list, error } = await admin.auth.admin.listUsers()
-      if (error) throw new Error(error.message)
-
-      const existing = list.users.find(u => u.email === email.toLowerCase().trim())
-      return json({ ok: true, exists: !!existing, user_id: existing?.id ?? null })
+    function makeRow(row){
+      const cells=Array.from({length:nd},(_,i)=>{
+        const d=i+1,we=isWE(y,m,d),td=isTd(y,m,d);
+        const de=eMapS[d]||[];
+        const ev2=row.cl
+          ? de.find(e=>(e.tipo==='chiusura'||e.tipo==='nota')&&!e.utente_id)
+          : de.find(e=>e.utente_id===row.id);
+        const cld2=closedS.has(d)&&!row.cl;
+        const eid=ev2?ev2.id:'';
+        let tipParts=[];
+        if(ev2&&ev2.tipo!=='chiusura'&&ev2.tipo!=='nota'&&ev2.durata&&ev2.durata!=='intera') tipParts.push(DURATA[ev2.durata]||ev2.durata);
+        if(ev2?.note) tipParts.push(ev2.note);
+        const tip=tipParts.length?`title="${esc(tipParts.join(' — '))}"`:'';
+        return `<td><div class="cc${we?' we':''}${td?' td0':''}${(row.cl&&ev2)||cld2?' cld':''}" data-d="${d}" data-u="${esc(row.cl?'':row.id)}" data-e="${esc(eid)}" data-cl="${row.cl?1:0}" data-sid="${sid2}" ${tip}>${makeDot(ev2,row.cl)}</div></td>`;
+      }).join('');
+      return `<tr class="${row.cl?'crow-cl':''}"><td class="chn">${esc(row.lbl)}</td>${cells}</tr>`;
     }
 
-    // ══════════════════════════════════════════════════════════
-    // CREATE
-    // ══════════════════════════════════════════════════════════
-    if (action === 'create') {
-      const { email, password, nome, cognome, ruolo, sedi, calendario_sedi, tipo_id } = body
-      if (!email || !nome || !cognome) throw new Error('Email, nome e cognome sono obbligatori')
-      if (!RUOLI_VALIDI.includes(ruolo))  throw new Error(`Ruolo non valido. Valori ammessi: ${RUOLI_VALIDI.join(', ')}`)
+    // riga intestazione sede (se vista multi-sede)
+    const sedeHeader = !isAdm && sediVisibili.length>1
+      ? `<tr><td colspan="${nd+1}" style="padding:6px 14px;background:${sedeObj.colore}18;border-top:2px solid ${sedeObj.colore};font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:${sedeObj.colore}">${esc(sedeObj.nome)}</td></tr>`
+      : '';
 
-      // admin_sede non può creare altri admin
-      if (callerProfile.ruolo === 'admin_sede' && ruolo === 'admin') {
-        throw new Error('admin_sede non può creare utenti admin')
-      }
-
-      const emailNorm = email.toLowerCase().trim()
-
-      const { data: list, error: listErr } = await admin.auth.admin.listUsers()
-      if (listErr) throw new Error(listErr.message)
-      const existing = list.users.find(u => u.email === emailNorm)
-
-      let userId: string
-
-      if (existing) {
-        userId = existing.id
-        const { data: existingProfile } = await admin
-          .from('ferie_profili')
-          .select('id')
-          .eq('id', userId)
-          .maybeSingle()
-        if (existingProfile) throw new Error('Questo utente ha già un profilo in Gestione Ferie')
-      } else {
-        if (!password) throw new Error('Password obbligatoria per i nuovi utenti')
-        if (password.length < 6) throw new Error('Password minimo 6 caratteri')
-
-        const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
-          email: emailNorm,
-          password,
-          email_confirm: true,
-          user_metadata: { nome, cognome, ruolo },
-        })
-        if (createErr) throw new Error(createErr.message)
-        userId = newUser.user.id
-      }
-
-      // Upsert profilo
-      const profileData: Record<string, unknown> = {
-        id:      userId,
-        nome:    nome.trim(),
-        cognome: cognome.trim(),
-        email:   emailNorm,
-        ruolo,
-        attivo:  true,
-      }
-      if (calendario_sedi) profileData.calendario_sedi = calendario_sedi
-      if (tipo_id)         profileData.tipo_id         = tipo_id
-
-      const { error: upsertErr } = await admin
-        .from('ferie_profili')
-        .upsert(profileData, { onConflict: 'id' })
-      if (upsertErr) throw new Error(upsertErr.message)
-
-      // Associa sedi
-      if (sedi?.length) {
-        const { error: sediErr } = await admin
-          .from('ferie_utenti_sedi')
-          .insert(sedi.map((sid: string) => ({ utente_id: userId, sede_id: sid })))
-        if (sediErr) throw new Error(sediErr.message)
-      }
-
-      return json({
-        ok:           true,
-        user_id:      userId,
-        auth_created: !existing,
-      })
-    }
-
-    // ══════════════════════════════════════════════════════════
-    // UPDATE
-    // ══════════════════════════════════════════════════════════
-    if (action === 'update') {
-      const { user_id, nome, cognome, email, ruolo, attivo, password, sedi, calendario_sedi, tipo_id } = body
-      if (!user_id) throw new Error('user_id obbligatorio')
-      if (ruolo && !RUOLI_VALIDI.includes(ruolo)) throw new Error(`Ruolo non valido. Valori ammessi: ${RUOLI_VALIDI.join(', ')}`)
-
-      if (callerProfile.ruolo === 'admin_sede' && ruolo === 'admin') {
-        throw new Error('admin_sede non può assegnare ruolo admin')
-      }
-
-      // Aggiorna profilo
-      const profilePayload: Record<string, unknown> = {}
-      if (nome             !== undefined) profilePayload.nome             = nome.trim()
-      if (cognome          !== undefined) profilePayload.cognome          = cognome.trim()
-      if (email            !== undefined) profilePayload.email            = email.toLowerCase().trim()
-      if (ruolo            !== undefined) profilePayload.ruolo            = ruolo
-      if (attivo           !== undefined) profilePayload.attivo           = attivo
-      if (calendario_sedi  !== undefined) profilePayload.calendario_sedi  = calendario_sedi
-      if (tipo_id          !== undefined) profilePayload.tipo_id          = tipo_id
-
-      if (Object.keys(profilePayload).length) {
-        const { error: updErr } = await admin
-          .from('ferie_profili')
-          .update(profilePayload)
-          .eq('id', user_id)
-        if (updErr) throw new Error(updErr.message)
-      }
-
-      // Rinnova associazioni sedi
-      if (sedi !== undefined) {
-        await admin.from('ferie_utenti_sedi').delete().eq('utente_id', user_id)
-        if (sedi.length) {
-          const { error: sediErr } = await admin
-            .from('ferie_utenti_sedi')
-            .insert(sedi.map((sid: string) => ({ utente_id: user_id, sede_id: sid })))
-          if (sediErr) throw new Error(sediErr.message)
-        }
-      }
-
-      // Password (opzionale)
-      if (password) {
-        if (password.length < 6) throw new Error('Password minimo 6 caratteri')
-        const { error: pwdErr } = await admin.auth.admin.updateUserById(user_id, { password })
-        if (pwdErr) throw new Error(pwdErr.message)
-      }
-
-      return json({ ok: true })
-    }
-
-    // ══════════════════════════════════════════════════════════
-    // DELETE_PROFILE — rimuove profilo + sedi, NON l'utente Auth
-    // ══════════════════════════════════════════════════════════
-    if (action === 'delete_profile') {
-      const { user_id } = body
-      if (!user_id) throw new Error('user_id obbligatorio')
-      if (user_id === caller.id) throw new Error('Non puoi eliminare il tuo stesso profilo')
-
-      // Controlla che admin_sede non elimini un admin
-      if (callerProfile.ruolo === 'admin_sede') {
-        const { data: target } = await admin
-          .from('ferie_profili')
-          .select('ruolo')
-          .eq('id', user_id)
-          .maybeSingle()
-        if (target?.ruolo === 'admin') throw new Error('admin_sede non può eliminare utenti admin')
-      }
-
-      // Elimina associazioni sedi prima (FK constraint)
-      await admin.from('ferie_utenti_sedi').delete().eq('utente_id', user_id)
-
-      const { error: delErr } = await admin
-        .from('ferie_profili')
-        .delete()
-        .eq('id', user_id)
-      if (delErr) throw new Error(delErr.message)
-
-      return json({ ok: true })
-    }
-
-    throw new Error(`Azione non riconosciuta: ${action}`)
-
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Errore sconosciuto'
-    return json({ ok: false, error: msg }, 400)
+    const rows=[{id:'__c__',cl:true,lbl: !isAdm && sediVisibili.length>1 ? esc(sedeObj.nome) : 'SEDE'},...utentiS.map(u=>({...u,lbl:`${u.cognome} ${u.nome}`}))];
+    return sedeHeader + rows.map(r=>makeRow(r)).join('');
   }
-})
+
+  // stats: per admin tutti gli eventi, per utente solo i suoi
+  const evPerStats = isAdm
+    ? S.eventi.filter(e=>e.data.startsWith(pfx))
+    : S.eventi.filter(e=>e.data.startsWith(pfx)&&(e.utente_id===S.user.id||(e.sede_id&&(S.user.sedi||[]).includes(e.sede_id)&&!e.utente_id)));
+  const fN=evPerStats.filter(e=>e.tipo==='ferie').length;
+  const pN=evPerStats.filter(e=>e.tipo==='permesso').length;
+  const cN=evPerStats.filter(e=>e.tipo==='chiusura').length;
+  const mN=evPerStats.filter(e=>e.tipo==='malattia').length;
+  const nN=evPerStats.filter(e=>e.tipo==='nota').length;
+
+  const thDays=Array.from({length:nd},(_,i)=>{
+    const d=i+1,we=isWE(y,m,d),td=isTd(y,m,d);
+    return `<th class="${we?'we':''} ${td?'td0':''}">${p2(d)}<br><span style="font-weight:400;font-size:8px">${GIORNI[new Date(y,m,d).getDay()]}</span></th>`;
+  }).join('');
+
+  // Per admin: mostra solo la sede selezionata. Per utente: tutte le sedi accorpate
+  const sediDaMostrare = isAdm ? [sede].filter(Boolean) : sediVisibili;
+  const trs = sediDaMostrare.map(s=>righePerSede(s)).join('');
+
+  const legItem=(cls,lbl)=>`<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--g700)"><span class="cd ${cls}" style="width:16px;height:16px;font-size:8px;flex-shrink:0">${cls==='dC'?'✕':cls==='dB'?'B':cls.startsWith('dF')?'F':cls.startsWith('dP')?'P':cls.startsWith('dM')&&cls!=='dN'?'M':'N'}</span>${lbl}</span>`;
+
+  pb.innerHTML=`<div class="fi-an">
+    <div class="sg">
+      <div class="sc"><div class="si" style="background:var(--blue-xlight)">🌴</div><div><div class="sl">Ferie</div><div class="sv">${fN}</div></div></div>
+      <div class="sc"><div class="si" style="background:var(--blue-xlight)">⏰</div><div><div class="sl">Permessi</div><div class="sv">${pN}</div></div></div>
+      <div class="sc"><div class="si" style="background:var(--red-light)">🔒</div><div><div class="sl">Chiusure</div><div class="sv">${cN}</div></div></div>
+      <div class="sc"><div class="si" style="background:var(--purple-light)">🤒</div><div><div class="sl">Malattie</div><div class="sv">${mN}</div></div></div>
+      <div class="sc"><div class="si" style="background:#FEF3DC">📝</div><div><div class="sl">Note</div><div class="sv">${nN}</div></div></div>
+    </div>
+    <div class="card">
+      <div class="ch">
+        <div class="cctrls">
+          <div class="cmn">
+            <button class="bic" id="cprev">◀</button>
+            <span class="cml">${MESI[m]} ${y}</span>
+            <button class="bic" id="cnext">▶</button>
+          </div>
+          ${isAdm?`
+          <select class="csel" id="csel">
+            ${sediVisibili.map(s=>`<option value="${s.id}"${s.id===sId?' selected':''}>${esc(s.nome)}</option>`).join('')}
+          </select>
+          ${sede?sedeDot(sede.id):''}
+          <select class="csel" id="ctipof"><option value="">Tutti i tipi</option>${S.tipi.map(t=>`<option value="${t.id}"${S.cal.tipoFiltro===t.id?' selected':''}>${esc(t.nome)}</option>`).join('')}</select>
+          `:''}${!isAdm&&S.tipi.length?`<select class="csel" id="ctipof"><option value="">Tutti i tipi</option>${S.tipi.map(t=>`<option value="${t.id}"${S.cal.tipoFiltro===t.id?' selected':''}>${esc(t.nome)}</option>`).join('')}</select>`:''}
+        </div>
+        ${isAdm?`<button class="btn bp-green bsm" id="cadd">+ Aggiungi</button>`:''}
+      </div>
+      <div class="cleg">
+        ${legItem('dF','Ferie')} ${legItem('dFm','Ferie ½')}
+        ${legItem('dP','Permesso')} ${legItem('dPm','Permesso ½')}
+        ${legItem('dM','Malattia')} ${legItem('dMm','Malattia ½')}
+        ${legItem('dB','Maternità')}
+        ${legItem('dC','Chiusura')} ${legItem('dN','Nota')}
+        <span class="clh">${isAdm?'💡 Clicca su una cella per aggiungere/vedere eventi':'👁 Solo visualizzazione'}</span>
+      </div>
+      <div class="cscr">
+        <table class="ctbl">
+          <thead><tr><th class="chn">Utente</th>${thDays}</tr></thead>
+          <tbody>${trs}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+
+  $('cprev').addEventListener('click',()=>{
+    S.cal.m===0?(S.cal.y--,S.cal.m=11):S.cal.m--;
+    loadEventi().then(()=>renderPage());
+  });
+  $('cnext').addEventListener('click',()=>{
+    S.cal.m===11?(S.cal.y++,S.cal.m=0):S.cal.m++;
+    loadEventi().then(()=>renderPage());
+  });
+  if(isAdm){
+    $('csel')?.addEventListener('change',e=>{S.cal.sid=e.target.value;renderPage();});
+    $('cadd')?.addEventListener('click',()=>openAddEv(null,null,sId));
+  }
+  $('ctipof')?.addEventListener('change',e=>{S.cal.tipoFiltro=e.target.value;renderPage();});
+
+  pb.querySelectorAll('.cc').forEach(c=>{
+    c.addEventListener('click',()=>{
+      if(!isAdm) return;
+      const d=parseInt(c.dataset.d),eid=c.dataset.e;
+      const data=`${y}-${p2(m+1)}-${p2(d)}`;
+      const cSid=c.dataset.sid||sId;
+      if(eid){ const e=S.eventi.find(x=>x.id===eid); if(e) openDetailEv(e,cSid); }
+      else if(c.dataset.cl==='1') openAddEvSede(data,cSid);
+      else openAddEv(data,c.dataset.u||null,cSid);
+    });
+  });
+}
+
+/* ── Modal aggiungi evento riga SEDE (chiusura o nota sede) ── */
+function openAddEvSede(data,sedeId){
+  const existing=S.eventi.find(e=>e.data===data&&e.sede_id===sedeId&&(e.tipo==='chiusura'||e.tipo==='nota')&&!e.utente_id);
+  if(existing){ openDetailEv(existing,sedeId); return; }
+  let tipo='chiusura';
+  const body=`
+    <div class="fg"><div class="fl">Data</div><input class="fi" id="ed" type="date" value="${data}" style="font-family:monospace" readonly/></div>
+    <div class="fg"><div class="fl">Tipo evento</div>
+      <div id="etb" style="display:flex;gap:7px">
+        <button class="btn bsm etb-btn" data-t="chiusura" style="background:var(--navy);color:#fff;border:1px solid transparent">🔒 Chiusura</button>
+        <button class="btn bsm etb-btn" data-t="nota" style="background:var(--g100);color:var(--g700);border:1px solid var(--g200)">📝 Nota</button>
+      </div>
+    </div>
+    <div class="fg"><div class="fl">Note (opzionale)</div><textarea class="fta" id="en" placeholder="Es. Festività, manutenzione…"></textarea></div>`;
+  openM(`📅 Evento sede`,body,[
+    {l:'Annulla',c:'bs',a:closeM},
+    {l:'✅ Salva',c:'bp',a:async()=>{
+      const n=$('en').value.trim();
+      try{
+        const [ev]=await db('POST',T('calendario'),{body:{data,tipo,utente_id:null,sede_id:sedeId,durata:'intera',note:n,created_by:S.user.id}});
+        S.eventi.push(ev);
+        logAct('calendario_insert',`${TIPO[tipo]?.l||tipo} sede: ${data}`);
+        closeM();renderPage();toast('Evento aggiunto ✅');
+      }catch(e){toast(e.message,'err');}
+    }},
+  ]);
+  const ref=()=>{
+    document.querySelectorAll('.etb-btn').forEach(b=>{
+      b.style.background=b.dataset.t===tipo?'var(--navy)':'var(--g100)';
+      b.style.color=b.dataset.t===tipo?'#fff':'var(--g700)';
+      b.style.borderColor=b.dataset.t===tipo?'transparent':'var(--g200)';
+    });
+  };
+  document.querySelectorAll('.etb-btn').forEach(b=>b.addEventListener('click',()=>{tipo=b.dataset.t;ref();}));
+  ref();
+}
+
+/* ── Modal aggiungi evento ── */
+function openAddEv(data,uDefault,sedeId){
+  const utenti=S.utenti.filter(u=>u.sedi.includes(sedeId)&&(u.calendario_sedi||u.sedi).includes(sedeId));
+  let tipo='ferie';
+  const TIPI_RANGE=['ferie','malattia','maternita']; // tipi che supportano il range
+  const body=`
+    <div class="fg"><div class="fl">Tipo evento</div>
+      <div id="etb" style="display:flex;gap:7px;flex-wrap:wrap">
+        ${Object.entries(TIPO).map(([k,v])=>`<button class="btn bsm etb-btn" data-t="${k}" style="background:${k===tipo?'var(--navy)':'var(--g100)'};color:${k===tipo?'#fff':'var(--g700)'};border:1px solid ${k===tipo?'transparent':'var(--g200)'}">${v.e} ${v.l}</button>`).join('')}
+      </div>
+    </div>
+    <div class="fg" id="eu-fg"><div class="fl">Utente</div>
+      <select class="fse" id="eu">
+        ${utenti.map(u=>`<option value="${u.id}"${u.id===uDefault?' selected':''}>${esc(u.cognome+' '+u.nome)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="fg" id="edr-fg"><div class="fl">Durata giornaliera</div>
+      <select class="fse" id="edr">
+        ${Object.entries(DURATA).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}
+      </select>
+    </div>
+    <div id="erange-fg" style="display:none">
+      <div style="font-size:11px;font-weight:700;color:var(--g700);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Periodo</div>
+      <div class="fr">
+        <div class="fg"><div class="fl">Data inizio</div><input class="fi" id="ed" type="date" value="${data||todayStr()}" style="font-family:monospace"/></div>
+        <div class="fg"><div class="fl">Data fine</div><input class="fi" id="ed2" type="date" value="${data||todayStr()}" style="font-family:monospace"/></div>
+      </div>
+      <div class="alert ai" id="erange-info" style="font-size:12px;margin-top:4px">💡 Seleziona date diverse per inserire l'evento su più giorni</div>
+    </div>
+    <div class="fg" id="edata-fg"><div class="fl">Data</div><input class="fi" id="ed-single" type="date" value="${data||todayStr()}" style="font-family:monospace"/></div>
+    <div class="fg"><div class="fl">Note (opzionale)</div><textarea class="fta" id="en" placeholder="Es. Visita medica, ferie estive…"></textarea></div>`;
+  openM(`📅 Nuovo evento`,body,[
+    {l:'Annulla',c:'bs',a:closeM},
+    {l:'✅ Salva',c:'bp',a:async()=>{
+      const t=tipo,n=$('en').value.trim();
+      const dr=t==='nota'||t==='chiusura'||t==='maternita'?'intera':($('edr').value||'intera');
+      const u=t==='chiusura'?null:($('eu').value||null);
+      if(t!=='chiusura'&&!u){toast('Seleziona un dipendente','err');return;}
+
+      const usaRange=TIPI_RANGE.includes(t);
+      const dInizio=usaRange?($('ed')?.value):($('ed-single')?.value);
+      const dFine=usaRange?($('ed2')?.value||dInizio):dInizio;
+      if(!dInizio){toast('Seleziona una data','err');return;}
+      if(usaRange&&dFine<dInizio){toast('La data fine deve essere uguale o successiva alla data inizio','err');return;}
+
+      try{
+        // Genera tutti i giorni nel range (saltando weekend solo se giornata intera per ferie)
+        const giorni=[];
+        const cur=new Date(dInizio+'T00:00:00');
+        const fine=new Date(dFine+'T00:00:00');
+        while(cur<=fine){
+          const dow=cur.getDay();
+          // Includi tutti i giorni (anche weekend — potrebbero volerli)
+          giorni.push(`${cur.getFullYear()}-${p2(cur.getMonth()+1)}-${p2(cur.getDate())}`);
+          cur.setDate(cur.getDate()+1);
+        }
+
+        // Inserimento multiplo
+        const inseriti=[];
+        for(const giorno of giorni){
+          // Salta se esiste già un evento dello stesso tipo per quell'utente in quel giorno
+          const exists=S.eventi.find(e=>e.data===giorno&&e.utente_id===u&&e.sede_id===sedeId&&e.tipo===t);
+          if(exists) continue;
+          const [ev]=await db('POST',T('calendario'),{body:{data:giorno,tipo:t,utente_id:u,sede_id:sedeId,durata:dr,note:n,created_by:S.user.id}});
+          S.eventi.push(ev);
+          inseriti.push(giorno);
+        }
+        const saltati=giorni.length-inseriti.length;
+        logAct('calendario_insert',`${TIPO[t]?.l||t}: ${dInizio}${dFine!==dInizio?'→'+dFine:''} — ${u?uNome(u):'Sede'}`);
+        closeM();renderPage();
+        toast(inseriti.length===1?'Evento aggiunto ✅':`${inseriti.length} eventi aggiunti${saltati>0?` (${saltati} già presenti saltati)`:''} ✅`);
+      }catch(e){toast(e.message,'err');}
+    }},
+  ]);
+  const ref=()=>{
+    const isCl=tipo==='chiusura',isNt=tipo==='nota',isMat=tipo==='maternita';
+    const usaRange=TIPI_RANGE.includes(tipo);
+    $('eu-fg').style.display=isCl?'none':'';
+    $('edr-fg').style.display=(isCl||isNt||isMat)?'none':'';
+    // Mostra range o singola data
+    const rangeFg=$('erange-fg'),dataFg=$('edata-fg');
+    if(rangeFg&&dataFg){
+      rangeFg.style.display=usaRange?'':'none';
+      dataFg.style.display=usaRange?'none':'';
+    }
+    // Sync date-single ↔ range start when switching
+    if(usaRange&&$('ed-single')?.value&&$('ed')) $('ed').value=$('ed-single').value||$('ed').value;
+    if(!usaRange&&$('ed')?.value&&$('ed-single')) $('ed-single').value=$('ed').value||$('ed-single').value;
+    document.querySelectorAll('.etb-btn').forEach(b=>{
+      b.style.background=b.dataset.t===tipo?'var(--navy)':'var(--g100)';
+      b.style.color=b.dataset.t===tipo?'#fff':'var(--g700)';
+      b.style.borderColor=b.dataset.t===tipo?'transparent':'var(--g200)';
+    });
+    // Aggiorna info range quando cambiano le date
+    const upd=()=>{
+      const d1=$('ed')?.value,d2=$('ed2')?.value;
+      if(!d1||!d2) return;
+      const days=Math.round((new Date(d2+'T00:00:00').getTime()-new Date(d1+'T00:00:00').getTime())/86400000)+1;
+      const info=$('erange-info');
+      if(info) info.textContent=days===1?'💡 Singolo giorno':`💡 ${days} giorni (${fmt(new Date(d1+'T00:00:00'))} → ${fmt(new Date(d2+'T00:00:00'))})`;
+    };
+    setTimeout(()=>{ $('ed')?.addEventListener('change',upd); $('ed2')?.addEventListener('change',upd); upd(); },30);
+  };
+  document.querySelectorAll('.etb-btn').forEach(b=>b.addEventListener('click',()=>{tipo=b.dataset.t;ref();}));
+  ref();
+}
+
+/* ── Modal dettaglio evento ── */
+function openDetailEv(ev,sedeId){
+  const isAdm=S.user?.ruolo==='admin'||S.user?.ruolo==='admin_sede';
+  const s=S.sedi.find(x=>x.id===ev.sede_id);
+  const body=`
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">${bTipo(ev.tipo)}<span style="font-size:12px;color:var(--g500)">${DURATA[ev.durata]||ev.durata}</span></div>
+      <div class="fg" style="margin:0"><div class="fl">Data</div><div style="font-size:15px;font-weight:700">${fmt(ev.data)}</div></div>
+      ${ev.utente_id?`<div class="fg" style="margin:0"><div class="fl">Dipendente</div><div style="font-size:14px;font-weight:600">${esc(uNome(ev.utente_id))}</div></div>`:''}
+      ${s?`<div class="fg" style="margin:0"><div class="fl">Sede</div>${sedeDot(s.id)}</div>`:''}
+      ${ev.note?`<div class="fg" style="margin:0"><div class="fl">Note</div><div style="font-size:13px;color:var(--g700);background:var(--g50);padding:8px 11px;border-radius:6px">${esc(ev.note)}</div></div>`:''}
+    </div>`;
+  const btns=[{l:'Chiudi',c:'bs',a:closeM}];
+  if(isAdm) btns.unshift({l:'🗑 Elimina',c:'bd',a:async()=>{
+    await db('DELETE',T('calendario'),{flt:`id=eq.${ev.id}`});
+    S.eventi=S.eventi.filter(e=>e.id!==ev.id);
+    logAct('calendario_delete',`Eliminato ${ev.tipo}: ${ev.data}`);
+    closeM();renderPage();toast('Evento eliminato');
+  }});
+  openM(`${TIPO[ev.tipo]?.e||''} Dettaglio evento`,body,btns);
+}
+
+/* ══════════════════════════════════════════
+   PAGINA TIPI
+══════════════════════════════════════════ */
+function renderTipi(pb){
+  pb.innerHTML=`<div class="fi-an"><div class="card">
+    <div class="ch"><span class="ct">🏷 Tipi utente (${S.tipi.length})</span><button class="btn bp-green bsm" id="tadd">+ Nuovo tipo</button></div>
+    ${!S.tipi.length
+      ?`<div class="emp"><div class="emi">🏷</div><div class="emt">Nessun tipo configurato</div><div class="ems">Es. Segreteria, Fisioterapia, Medico…</div></div>`
+      :`<table class="dt"><thead><tr><th>Nome</th><th>Descrizione</th><th>Utenti</th><th>Azioni</th></tr></thead><tbody>
+      ${S.tipi.map(t=>{
+        const cnt=S.utenti.filter(u=>u.tipo_id===t.id).length;
+        return `<tr>
+          <td><div class="tn">${esc(t.nome)}</div></td>
+          <td>${t.descrizione?esc(t.descrizione):'—'}</td>
+          <td><span class="bg bg-on">${cnt}</span></td>
+          <td><div class="tda">
+            <button class="btn bs bsm" data-te="${t.id}">✏</button>
+            <button class="btn bd bsm" data-td="${t.id}">🗑</button>
+          </div></td>
+        </tr>`;
+      }).join('')}
+      </tbody></table>`}
+  </div></div>`;
+  $('tadd').addEventListener('click',()=>openTipoM(null));
+  pb.querySelectorAll('[data-te]').forEach(b=>b.addEventListener('click',()=>openTipoM(S.tipi.find(x=>x.id===b.dataset.te))));
+  pb.querySelectorAll('[data-td]').forEach(b=>b.addEventListener('click',()=>{
+    const t=S.tipi.find(x=>x.id===b.dataset.td);
+    const cnt=S.utenti.filter(u=>u.tipo_id===t?.id).length;
+    openConf(`Eliminare il tipo "${t?.nome}"?${cnt>0?` Attenzione: ${cnt} utenti sono associati.`:''}`,async()=>{
+      await db('DELETE',T('tipi'),{flt:`id=eq.${b.dataset.td}`});
+      S.tipi=S.tipi.filter(x=>x.id!==b.dataset.td);
+      renderPage(); toast('Tipo eliminato');
+    });
+  }));
+}
+function openTipoM(tipo){
+  const body=`
+    <div class="fg"><div class="fl">Nome *</div><input class="fi" id="tnome" value="${esc(tipo?.nome||'')}" placeholder="Es. Segreteria, Medico…"/></div>
+    <div class="fg"><div class="fl">Descrizione</div><input class="fi" id="tdesc" value="${esc(tipo?.descrizione||'')}"/></div>`;
+  openM(tipo?'✏ Modifica tipo':'+ Nuovo tipo',body,[
+    {l:'Annulla',c:'bs',a:closeM},
+    {l:'Salva',c:'bp',a:async()=>{
+      const nome=$('tnome').value.trim(),desc=$('tdesc').value.trim();
+      if(!nome){toast('Il nome è obbligatorio','err');return;}
+      try{
+        if(tipo){
+          await db('PATCH',T('tipi'),{flt:`id=eq.${tipo.id}`,body:{nome,descrizione:desc}});
+          S.tipi=S.tipi.map(x=>x.id===tipo.id?{...x,nome,descrizione:desc}:x);
+        }else{
+          const [nt]=await db('POST',T('tipi'),{body:{nome,descrizione:desc}});
+          S.tipi.push(nt);
+        }
+        closeM();renderPage();toast(tipo?'Tipo aggiornato':'Tipo aggiunto ✅');
+      }catch(e){toast(e.message,'err');}
+    }},
+  ]);
+}
+
+/* ══════════════════════════════════════════
+   PAGINA SEDI
+══════════════════════════════════════════ */
+function renderSedi(pb){
+  pb.innerHTML=`<div class="fi-an"><div class="card">
+    <div class="ch"><span class="ct">🏢 Sedi (${S.sedi.length})</span><button class="btn bp-green bsm" id="sadd">+ Nuova sede</button></div>
+    ${!S.sedi.length?`<div class="emp"><div class="emi">🏢</div><div class="emt">Nessuna sede</div></div>`:
+    `<table class="dt"><thead><tr><th>Nome</th><th>Colore</th><th>Stato</th><th>Azioni</th></tr></thead><tbody>
+    ${S.sedi.map(s=>`<tr>
+      <td><div class="tn">${esc(s.nome)}</div>${s.descrizione?`<div class="ts">${esc(s.descrizione)}</div>`:''}</td>
+      <td><span style="display:inline-flex;align-items:center;gap:7px"><span style="width:20px;height:20px;border-radius:4px;background:${s.colore};display:inline-block"></span><code style="font-size:11px;color:var(--g500)">${s.colore}</code></span></td>
+      <td><span class="bg ${s.attiva?'bg-on':'bg-off'}">${s.attiva?'● Attiva':'○ Inattiva'}</span></td>
+      <td><div class="tda">
+        <button class="btn bs bsm" data-se="${s.id}">✏</button>
+        <button class="btn bd bsm" data-sd="${s.id}">🗑</button>
+      </div></td>
+    </tr>`).join('')}
+    </tbody></table>`}
+  </div></div>`;
+  $('sadd').addEventListener('click',()=>openSedeM(null));
+  pb.querySelectorAll('[data-se]').forEach(b=>b.addEventListener('click',()=>openSedeM(S.sedi.find(x=>x.id===b.dataset.se))));
+  pb.querySelectorAll('[data-sd]').forEach(b=>b.addEventListener('click',()=>{
+    const s=S.sedi.find(x=>x.id===b.dataset.sd);
+    openConf(`Eliminare la sede "${s?.nome}"? Tutti gli eventi associati verranno eliminati.`,async()=>{
+      await db('DELETE',T('sedi'),{flt:`id=eq.${b.dataset.sd}`});
+      S.sedi=S.sedi.filter(x=>x.id!==b.dataset.sd); renderPage(); toast('Sede eliminata');
+    });
+  }));
+}
+
+function openSedeM(sede){
+  let col=sede?.colore||'#2E6DA4';
+  const body=`
+    <div class="fg"><div class="fl">Nome sede *</div><input class="fi" id="sn" value="${esc(sede?.nome||'')}"/></div>
+    <div class="fg"><div class="fl">Descrizione</div><input class="fi" id="sd" value="${esc(sede?.descrizione||'')}"/></div>
+    <div class="fg"><div class="fl">Colore identificativo</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px">
+        <input type="color" id="sc" value="${col}" style="width:40px;height:34px;border:1.5px solid var(--g300);border-radius:6px;cursor:pointer;padding:2px"/>
+        ${SWATCHES.map(c=>`<span class="sw${c===col?' sel':''}" data-c="${c}" style="background:${c}"></span>`).join('')}
+      </div>
+    </div>`;
+  openM(sede?'✏ Modifica sede':'+ Nuova sede',body,[
+    {l:'Annulla',c:'bs',a:closeM},
+    {l:'Salva',c:'bp',a:async()=>{
+      const nome=$('sn').value.trim(),desc=$('sd').value.trim(),colore=$('sc').value;
+      if(!nome){toast('Nome obbligatorio','err');return;}
+      try{
+        if(sede){
+          await db('PATCH',T('sedi'),{flt:`id=eq.${sede.id}`,body:{nome,descrizione:desc,colore}});
+          S.sedi=S.sedi.map(s=>s.id===sede.id?{...s,nome,descrizione:desc,colore}:s);
+        }else{
+          const [ns]=await db('POST',T('sedi'),{body:{nome,descrizione:desc,colore,attiva:true}});
+          S.sedi.push(ns); logAct('sede_create',`Nuova sede: ${nome}`);
+        }
+        closeM();renderPage();toast(sede?'Sede aggiornata':'Sede aggiunta ✅');
+      }catch(e){toast(e.message,'err');}
+    }},
+  ]);
+  document.querySelectorAll('.sw').forEach(sw=>{
+    sw.addEventListener('click',()=>{
+      col=sw.dataset.c; $('sc').value=col;
+      document.querySelectorAll('.sw').forEach(x=>x.classList.toggle('sel',x.dataset.c===col));
+    });
+  });
+}
+
+
+/* ── Check email live + avviso password cross-tool ── */
+async function checkEmailLive(inputEl,infoEl,pwdWrap,fnName){
+  const email=inputEl.value.trim();
+  infoEl.style.display='none'; infoEl.dataset.exists='';
+  if(!email||!email.includes('@')) return;
+  try{
+    const res=await fetch(`${CFG.FN}/${fnName}`,{method:'POST',
+      headers:{'Authorization':`Bearer ${S.token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({action:'check_email',email})});
+    const data=await res.json();
+    if(!data.ok) return;
+    infoEl.dataset.exists=data.exists?'true':'false';
+    if(data.exists){
+      infoEl.style.cssText='display:block;margin-top:6px;padding:8px 12px;border-radius:var(--rsm);background:#EEF5E3;border:1px solid var(--blue-light);font-size:12px;color:#2e6e1a;font-weight:600';
+      infoEl.textContent='\u2713 Utente gi\u00e0 presente \u2014 la password rimane la stessa impostata per gli altri tool';
+      if(pwdWrap) pwdWrap.style.display='none';
+    }else{
+      infoEl.style.cssText='display:block;margin-top:6px;padding:8px 12px;border-radius:var(--rsm);background:var(--g50);border:1px solid var(--g200);font-size:12px;color:var(--g500)';
+      infoEl.textContent='Nuovo utente \u2014 inserisci una password per creare l\'account';
+      if(pwdWrap) pwdWrap.style.display='';
+    }
+  }catch(e){}
+}
+const PWD_WARN_HTML='<div style="margin-top:6px;padding:8px 12px;border-radius:var(--rsm);background:#FEF0E3;border:1px solid #f5c28a;font-size:12px;color:#7a3800;font-weight:600">\u26a0 Attenzione: questa password sar\u00e0 valida per tutti i tool che usano lo stesso account.</div>';
+function renderUtentiTable(list,pb){
+  const el=document.getElementById('u-table-wrap');if(!el)return;
+  const isAdm=S.user?.ruolo==='admin';
+  if(!list.length){el.innerHTML='<div class="emp"><div class="emi">👥</div><div class="emt">Nessun utente trovato</div></div>';return;}
+  const RBADGE={admin:['bga','Admin'],admin_sede:['bgas','Admin Sede'],utente:['bgu','Utente']};
+  el.innerHTML=`<table class="dt"><thead><tr><th>Utente</th><th>Ruolo</th><th>Sedi</th><th>Stato</th>${isAdm?'<th>Azioni</th>':''}</tr></thead><tbody>
+  ${list.map(u=>{const[rc,rl]=RBADGE[u.ruolo]||['bgu',u.ruolo];return`<tr>
+    <td><div class="tn">${esc(u.cognome+' '+u.nome)}</div><div class="ts">${esc(u.email||'')}</div></td>
+    <td><span class="bg ${rc}">${rl}</span></td>
+    <td><div style="display:flex;gap:4px;flex-wrap:wrap">${(u.sedi||[]).map(sid=>sedeDot(sid)).join('')}</div></td>
+    <td><span class="bg ${u.attivo?'bg-on':'bg-off'}">${u.attivo?'&#9679; Attivo':'&#9675; Inattivo'}</span></td>
+    ${isAdm?`<td><div class="tda">
+      <button class="btn bs bsm" data-ue="${u.id}">&#9998; Modifica</button>
+      ${u.id!==S.user?.id?`<button class="btn bd bsm" data-ud="${u.id}">&#128465; Rimuovi</button>`:''}
+    </div></td>`:''}
+  </tr>`;}).join('')}
+  </tbody></table>`;
+  if(isAdm){
+    el.querySelectorAll('[data-ue]').forEach(b=>b.addEventListener('click',()=>openUtenteModal(S.utenti.find(x=>x.id===b.dataset.ue))));
+    el.querySelectorAll('[data-ud]').forEach(b=>b.addEventListener('click',()=>{
+      const u=S.utenti.find(x=>x.id===b.dataset.ud);
+      openConf(`Rimuovere il profilo di "${u?.nome} ${u?.cognome}"?\n\nL'account rimane attivo sugli altri tool.`,async()=>{
+        const res=await fetch(`${CFG.FN}/ferie-manage-user`,{method:'POST',
+          headers:{'Authorization':`Bearer ${S.token}`,'Content-Type':'application/json'},
+          body:JSON.stringify({action:'delete_profile',user_id:b.dataset.ud})});
+        const data=await res.json();
+        if(!data.ok) throw new Error(data.error||'Errore');
+        S.utenti=S.utenti.filter(x=>x.id!==b.dataset.ud);renderPage();toast('Profilo rimosso');
+      });
+    }));
+  }
+}
+
+function renderUtenti(pb){
+  const isAdm=S.user?.ruolo==='admin';
+  const isAdmSede=S.user?.ruolo==='admin_sede';
+  if(!isAdm&&!isAdmSede){goPage('calendario');return;}
+  const list=S.utenti||[];
+  pb.innerHTML=`<div class="fi-an"><div class="card">
+    <div class="ch"><span class="ct">&#128101; Utenti (${list.length})</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="fi" id="u-search" style="width:200px;padding:6px 11px" placeholder="&#128269; Cerca&hellip;"/>
+        ${isAdm?`<button class="btn bp-green bsm" id="u-add">+ Nuovo utente</button>`:''}
+      </div>
+    </div>
+    <div id="u-table-wrap"></div>
+  </div></div>`;
+  const render=q=>{const fl=list.filter(u=>`${u.cognome} ${u.nome} ${u.email}`.toLowerCase().includes((q||'').toLowerCase()));renderUtentiTable(fl,pb);};
+  render('');
+  document.getElementById('u-search').addEventListener('input',e=>render(e.target.value));
+  if(isAdm) document.getElementById('u-add')?.addEventListener('click',()=>openUtenteModal(null));
+}
+
+function openUtenteModal(u){
+  const isNew=!u;
+  const selS=u?.sedi||[];
+  const body=`
+    <div class="fr">
+      <div class="fg"><div class="fl">Nome *</div><input class="fi" id="um-nome" value="${esc(u?.nome||'')}"/></div>
+      <div class="fg"><div class="fl">Cognome *</div><input class="fi" id="um-cog" value="${esc(u?.cognome||'')}"/></div>
+    </div>
+    <div class="fg"><div class="fl">Tipo</div>
+      <select class="fse" id="um-tipo"><option value="">— Nessun tipo —</option>
+        ${S.tipi.map(t=>`<option value="${t.id}"${u?.tipo_id===t.id?' selected':''}>${esc(t.nome)}</option>`).join('')}
+      </select></div>
+    <div class="fg"><div class="fl">E-Mail *</div>
+      <input class="fi" id="um-email" type="email" value="${esc(u?.email||'')}"
+        ${isNew?'placeholder="nome@medicalgroup.it"':'readonly style="background:var(--g50);color:var(--g500);cursor:not-allowed"'}/>
+      ${isNew?'<div id="um-email-info" style="display:none"></div>':''}
+    </div>
+    ${isNew?`<div id="um-pwd-wrap"><div class="fg"><div class="fl">Password *</div>
+      <input class="fi" id="um-pwd" type="password" placeholder="Minimo 6 caratteri"/></div></div>`:''}
+    <div class="fg"><div class="fl">Ruolo</div><select class="fse" id="um-ruolo">
+      <option value="utente"${u?.ruolo==='utente'?' selected':''}>Utente</option>
+      <option value="admin_sede"${u?.ruolo==='admin_sede'?' selected':''}>Admin Sede</option>
+      <option value="admin"${u?.ruolo==='admin'?' selected':''}>Admin</option>
+    </select></div>
+    <div class="fg"><div class="fl">Sedi associate</div>
+      <div class="fch" id="um-sedi">
+        ${S.sedi.map(s=>`<label class="fci"><input type="checkbox" value="${s.id}"${selS.includes(s.id)?' checked':''}> ${sedeDot(s.id)}</label>`).join('')}
+      </div></div>
+    <div class="fg"><label class="tw">
+      <div class="tg"><input type="checkbox" id="um-attivo" ${u?.attivo!==false?'checked':''}><span class="ts2"></span></div>
+      <span class="fl" style="margin:0">Utente attivo</span>
+    </label></div>
+    ${!isNew?`<div class="fg"><div class="fl">Nuova password <span style="font-weight:400;font-size:11px;color:var(--g500)">(lascia vuoto per non modificare)</span></div>
+      <input class="fi" id="um-newpwd" type="password" placeholder="Minimo 6 caratteri"/>
+      <div id="um-pwd-warn" style="display:none">${PWD_WARN_HTML}</div></div>`:''}`;
+  openM(isNew?'+ Nuovo utente':'&#9998; Modifica utente',body,[
+    {l:'Annulla',c:'bs',a:closeM},
+    {l:'Salva',c:'bp',a:async()=>{
+      const nome=document.getElementById('um-nome').value.trim();
+      const cog=document.getElementById('um-cog').value.trim();
+      const email=document.getElementById('um-email').value.trim();
+      const ruolo=document.getElementById('um-ruolo').value;
+      const attivo=document.getElementById('um-attivo').checked;
+      const tipoId=document.getElementById('um-tipo')?.value||null;
+      const sediSel=[...document.querySelectorAll('#um-sedi input:checked')].map(x=>x.value);
+      if(!nome||!cog||!email){toast('Compila tutti i campi obbligatori','err');return;}
+      try{
+        if(isNew){
+          const emailInfo=document.getElementById('um-email-info');
+          const exists=emailInfo?.dataset.exists==='true';
+          const pwd=document.getElementById('um-pwd')?.value||'';
+          if(!exists&&pwd.length<6){toast('Password minimo 6 caratteri','err');return;}
+          const payload={action:'create',email,nome,cognome:cog,ruolo,sedi:sediSel,tipo_id:tipoId};
+          if(!exists) payload.password=pwd;
+          const res=await fetch(`${CFG.FN}/ferie-manage-user`,{method:'POST',
+            headers:{'Authorization':`Bearer ${S.token}`,'Content-Type':'application/json'},
+            body:JSON.stringify(payload)});
+          const data=await res.json();
+          if(!data.ok) throw new Error(data.error||'Errore creazione');
+          S.utenti.push({id:data.user_id,nome,cognome:cog,email,ruolo,attivo:true,sedi:sediSel});
+          closeM();toast(data.auth_created?'Utente creato ✅':'Profilo collegato ✅');
+        }else{
+          const pwd=document.getElementById('um-newpwd')?.value||'';
+          if(pwd&&pwd.length<6){toast('Password minimo 6 caratteri','err');return;}
+          const payload={action:'update',user_id:u.id,nome,cognome:cog,ruolo,attivo,sedi:sediSel,tipo_id:tipoId};
+          if(pwd) payload.password=pwd;
+          const res=await fetch(`${CFG.FN}/ferie-manage-user`,{method:'POST',
+            headers:{'Authorization':`Bearer ${S.token}`,'Content-Type':'application/json'},
+            body:JSON.stringify(payload)});
+          const data=await res.json();
+          if(!data.ok) throw new Error(data.error||'Errore aggiornamento');
+          S.utenti=S.utenti.map(x=>x.id===u.id?{...x,nome,cognome:cog,ruolo,attivo,sedi:sediSel}:x);
+          closeM();toast('Utente aggiornato ✅');
+        }
+        renderPage();
+      }catch(e){toast(e.message,'err');}
+    }},
+  ]);
+  if(isNew){
+    const emailEl=document.getElementById('um-email');
+    const infoEl=document.getElementById('um-email-info');
+    const pwdWrap=document.getElementById('um-pwd-wrap');
+    emailEl.addEventListener('blur',()=>checkEmailLive(emailEl,infoEl,pwdWrap,'ferie-manage-user'));
+  }
+  if(!isNew){
+    const pwdEl=document.getElementById('um-newpwd');
+    const warnEl=document.getElementById('um-pwd-warn');
+    if(pwdEl&&warnEl) pwdEl.addEventListener('input',()=>{warnEl.style.display=pwdEl.value.length>0?'':'none';});
+  }
+}
+
+/* ══════════════════════════════════════════
+   PAGINA EMAIL
+══════════════════════════════════════════ */
+function renderEmail(pb){
+  const today=new Date();
+  pb.innerHTML=`<div class="fi-an">
+    <div class="alert ai" style="margin-bottom:18px">📧 Email inviate tramite <strong>Brevo</strong> via Supabase Edge Function. Gli orari disponibili sono agli <strong>:00</strong> e <strong>:30</strong> di ogni ora (il cron gira ogni 30 minuti).</div>
+    <div class="card">
+      <div class="ch"><span class="ct">📧 Configurazioni email (${S.mailCfg.length})</span><button class="btn bp-green bsm" id="madd">+ Nuova configurazione</button></div>
+      ${!S.mailCfg.length?`<div class="emp"><div class="emi">📧</div><div class="emt">Nessuna configurazione</div><div class="ems">Aggiungi per inviare riepiloghi automatici agli admin</div></div>`:
+      S.mailCfg.map(c=>{
+        const adm=S.utenti.find(u=>u.id===c.admin_id);
+        const dF=addDays(c.range_da),dT=addDays(c.range_a);
+        const gd=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+        return `<div class="mailc" data-mid="${c.id}">
+          <div class="mch">
+            <div><div style="font-weight:700;font-size:14px">📧 ${esc(c.email_destinatario)}</div>
+              <div style="font-size:12px;color:var(--g500);margin-top:2px">Admin: ${adm?esc(adm.nome+' '+adm.cognome):'—'}</div></div>
+            <div style="display:flex;gap:10px;align-items:center">
+              <label class="tw">
+                <div class="tg"><input type="checkbox" class="mtog" data-id="${c.id}"${c.attiva?' checked':''}><span class="ts2"></span></div>
+                <span style="font-size:12px;font-weight:600;color:${c.attiva?'var(--green)':'var(--g500)'}">${c.attiva?'Attiva':'Inattiva'}</span>
+              </label>
+              <button class="btn bs bsm" data-ml="${c.id}" data-email="${esc(c.email_destinatario)}">📋</button>
+              <button class="btn bs bsm" data-me="${c.id}">✏</button>
+              <button class="btn bd bsm" data-md="${c.id}">🗑</button>
+            </div>
+          </div>
+          <div class="mcb">
+            <div><div class="mfl">Frequenza</div><div class="mfv">${c.frequenza==='giornaliera'?'📅 Giornaliera':`📅 Settimanale (${gd[c.giorno_settimana||1]})`}</div></div>
+            <div><div class="mfl">Orario</div><div class="mfv">🕐 ${c.orario}</div></div>
+            <div><div class="mfl">Range giorni</div><div class="mfv" style="font-family:monospace;font-size:12px">${c.range_da>=0?'+':''}${c.range_da} → +${c.range_a} da oggi</div></div>
+            <div><div class="mfl">Ultimo invio</div><div class="mfv">${c.ultimo_invio?fmtDt(c.ultimo_invio):'—'}</div></div>
+          </div>
+          <div class="mprev">💡 Riepilogo di oggi includerà: <strong>${fmt(dF)}</strong> → <strong>${fmt(dT)}</strong></div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+  $('madd').addEventListener('click',()=>openMailM(null));
+  pb.querySelectorAll('[data-ml]').forEach(b=>b.addEventListener('click',()=>openMailLog(b.dataset.email)));
+  pb.querySelectorAll('[data-me]').forEach(b=>b.addEventListener('click',()=>openMailM(S.mailCfg.find(c=>c.id===b.dataset.me))));
+  pb.querySelectorAll('[data-md]').forEach(b=>b.addEventListener('click',()=>{
+    const c=S.mailCfg.find(x=>x.id===b.dataset.md);
+    openConf(`Eliminare la configurazione per "${c?.email_destinatario}"?`,async()=>{
+      await db('DELETE',T('mail_config'),{flt:`id=eq.${b.dataset.md}`});
+      S.mailCfg=S.mailCfg.filter(x=>x.id!==b.dataset.md); renderPage(); toast('Configurazione eliminata');
+    });
+  }));
+  pb.querySelectorAll('.mtog').forEach(t=>t.addEventListener('change',async e=>{
+    const id=e.target.dataset.id, val=e.target.checked;
+    await db('PATCH',T('mail_config'),{flt:`id=eq.${id}`,body:{attiva:val}});
+    S.mailCfg=S.mailCfg.map(c=>c.id===id?{...c,attiva:val}:c);
+    toast(val?'Email attivata':'Email disattivata'); renderPage();
+  }));
+}
+
+async function openMailLog(email){
+  openM(`📋 Ultimi 5 invii`,`<div style="text-align:center;padding:20px"><span class="spn" style="border-color:rgba(46,109,164,.3);border-top-color:var(--blue);width:24px;height:24px"></span></div>`,[
+    {l:'Chiudi',c:'bs',a:closeM},
+  ]);
+  try{
+    const logs=await db('GET',T('log'),{
+      flt:`azione=in.(email_inviata,email_skip,email_errore)`,
+      ord:'created_at.desc',
+      lim:'100',
+    })||[];
+    const filtrati=logs.filter(l=>String(l.dettaglio||'').includes(email)).slice(0,5);
+    $('mbdy').innerHTML=!filtrati.length
+      ?`<div class="emp"><div class="emi">📭</div><div class="emt">Nessun invio registrato</div><div class="ems">per ${esc(email)}</div></div>`
+      :filtrati.map(l=>{
+        const ic=l.azione==='email_inviata'?'✅':l.azione==='email_errore'?'❌':'⏭';
+        const bg=l.azione==='email_inviata'?'var(--green-light)':l.azione==='email_errore'?'var(--red-light)':'var(--g100)';
+        return `<div style="display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--g100);align-items:flex-start">
+          <div style="width:30px;height:30px;border-radius:50%;background:${bg};display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${ic}</div>
+          <div>
+            <div style="font-size:10.5px;color:var(--g500);font-family:monospace;margin-bottom:2px">${fmtDt(l.created_at)}</div>
+            <div style="font-size:13px;color:var(--g700)">${esc(String(l.dettaglio||''))}</div>
+          </div>
+        </div>`;
+      }).join('');
+  }catch(e){
+    $('mbdy').innerHTML=`<div class="alert ae">⚠ ${esc(e.message)}</div>`;
+  }
+}
+
+function openMailM(conf){
+  const confOra = conf?.orario ? String(conf.orario).slice(0,5) : '08:00';
+  const confH = confOra.slice(0,2);
+  const confM = confOra.slice(3,5) === '30' ? '30' : '00';
+  const gd=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const body=`
+    <div class="fg"><div class="fl">Email destinatario *</div><input class="fi" id="me" type="email" value="${esc(conf?.email_destinatario||S.user?.email||'')}"/></div>
+    <div class="fr">
+      <div class="fg"><div class="fl">Frequenza</div>
+        <select class="fse" id="mf">
+          <option value="giornaliera"${!conf||conf.frequenza==='giornaliera'?' selected':''}>Giornaliera</option>
+          <option value="settimanale"${conf?.frequenza==='settimanale'?' selected':''}>Settimanale</option>
+        </select></div>
+      <div class="fg"><div class="fl">Orario invio</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select class="fse" id="moh" style="flex:1">
+            ${Array.from({length:24},(_,i)=>`<option value="${String(i).padStart(2,'0')}"${String(i).padStart(2,'0')===confH?' selected':''}>${String(i).padStart(2,'0')}</option>`).join('')}
+          </select>
+          <span style="font-weight:700;color:var(--g500)">:</span>
+          <select class="fse" id="mom" style="flex:1">
+            <option value="00"${confM==='00'?' selected':''}>00</option>
+            <option value="30"${confM==='30'?' selected':''}>30</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="fg" id="mgd" style="${conf?.frequenza==='settimanale'?'':'display:none'}"><div class="fl">Giorno settimana</div>
+      <select class="fse" id="mw">${gd.map((g,i)=>`<option value="${i}"${(conf?.giorno_settimana||1)===i?' selected':''}>${g}</option>`).join('')}</select></div>
+    <div class="fr">
+      <div class="fg"><div class="fl">Range da (es. -1=ieri, 0=oggi)</div><input class="fi" id="mrd" type="number" value="${conf?.range_da??-1}"/></div>
+      <div class="fg"><div class="fl">Range a (es. 7=tra 7 giorni)</div><input class="fi" id="mra" type="number" value="${conf?.range_a??7}"/></div>
+    </div>
+    <div class="alert ai" id="mprev" style="font-size:12px"></div>`;
+  openM(conf?'✏ Modifica configurazione':'+ Nuova configurazione email',body,[
+    {l:'Annulla',c:'bs',a:closeM},
+    {l:'Salva',c:'bp',a:async()=>{
+      const em=$('me').value.trim(),fr=$('mf').value,dw=parseInt($('mw').value||'1'),rd=parseInt($('mrd').value),ra=parseInt($('mra').value);
+      const or=`${$('moh').value}:${$('mom').value}:00`;
+      if(!em){toast('Inserisci un indirizzo email','err');return;}
+      try{
+        const pl={email_destinatario:em,frequenza:fr,orario:or,giorno_settimana:dw,range_da:rd,range_a:ra,attiva:true,admin_id:S.user.id};
+        if(conf){
+          await db('PATCH',T('mail_config'),{flt:`id=eq.${conf.id}`,body:pl});
+          S.mailCfg=S.mailCfg.map(c=>c.id===conf.id?{...c,...pl}:c);
+        }else{
+          const [nc]=await db('POST',T('mail_config'),{body:pl}); S.mailCfg.push(nc);
+        }
+        closeM();renderPage();toast(conf?'Configurazione aggiornata':'Configurazione aggiunta ✅');
+      }catch(e){toast(e.message,'err');}
+    }},
+  ]);
+  const upd=()=>{
+    const rd=parseInt($('mrd')?.value??-1),ra=parseInt($('mra')?.value??7);
+    const el=$('mprev');
+    if(el) el.textContent=`💡 L'email di oggi includerà i giorni dal ${fmt(addDays(rd))} al ${fmt(addDays(ra))}`;
+    if($('mgd')) $('mgd').style.display=$('mf')?.value==='settimanale'?'':'none';
+  };
+  setTimeout(()=>{ $('mf')?.addEventListener('change',upd); $('mrd')?.addEventListener('input',upd); $('mra')?.addEventListener('input',upd); upd(); },50);
+}
+
+/* ══════════════════════════════════════════
+   PAGINA LOG
+══════════════════════════════════════════ */
+function renderLog(pb){
+  let logPage=0, logQ='';
+  const PAGE=10;
+
+  const render=()=>{
+    const fl=S.log.filter(l=>{
+      if(!logQ) return true;
+      const q=logQ.toLowerCase();
+      return (l.azione||'').toLowerCase().includes(q)
+        ||(String(l.dettaglio||'')).toLowerCase().includes(q)
+        ||(uNome(l.utente_id)||'').toLowerCase().includes(q)
+        ||fmtDt(l.created_at).includes(q);
+    });
+    const tot=fl.length, pages=Math.max(1,Math.ceil(tot/PAGE));
+    if(logPage>=pages) logPage=pages-1;
+    const slice=fl.slice(logPage*PAGE,(logPage+1)*PAGE);
+
+    $('log-count').textContent=`${tot} eventi`;
+    $('log-entries').innerHTML=!slice.length
+      ?`<div class="emp"><div class="emi">📋</div><div class="emt">Nessun risultato</div></div>`
+      :slice.map(l=>`<div class="logr">
+          <div class="lic">${LOG_IC[l.azione]||'📌'}</div>
+          <div>
+            <div class="lt">${fmtDt(l.created_at)}</div>
+            <div class="lx">${l.utente_id?`<span class="lw">${esc(uNome(l.utente_id))}</span> — `:''}${esc(String(l.dettaglio||l.azione||''))}</div>
+          </div>
+        </div>`).join('');
+
+    // paginazione
+    $('log-pag').innerHTML=pages<=1?'':
+      `<div style="display:flex;align-items:center;gap:8px;margin-top:14px;justify-content:center">
+        <button class="bic" id="log-prev" ${logPage===0?'disabled style="opacity:.4"':''}>◀</button>
+        <span style="font-size:13px;color:var(--g500)">${logPage+1} / ${pages}</span>
+        <button class="bic" id="log-next" ${logPage>=pages-1?'disabled style="opacity:.4"':''}>▶</button>
+      </div>`;
+    $('log-prev')?.addEventListener('click',()=>{logPage--;render();});
+    $('log-next')?.addEventListener('click',()=>{logPage++;render();});
+  };
+
+  pb.innerHTML=`<div class="fi-an"><div class="card">
+    <div class="ch">
+      <span class="ct">📋 Log accessi e modifiche</span>
+      <div style="display:flex;gap:9px;align-items:center">
+        <span id="log-count" style="font-size:12px;color:var(--g500)"></span>
+        <input class="fi" id="log-search" style="width:220px;padding:6px 11px" placeholder="🔍 Cerca…"/>
+      </div>
+    </div>
+    <div class="cb">
+      <div id="log-entries"></div>
+      <div id="log-pag"></div>
+    </div>
+  </div></div>`;
+
+  render();
+  $('log-search').addEventListener('input',e=>{logQ=e.target.value;logPage=0;render();});
+}
+
+/* ══════════════════════════════════════════
+   MODAL SISTEMA
+══════════════════════════════════════════ */
+function openM(title, body, btns=[]){
+  $('mtit').textContent=title;
+  $('mbdy').innerHTML=body;
+  $('mft').innerHTML=btns.map((b,i)=>`<button class="btn ${b.c}" id="mb${i}">${b.l}</button>`).join('');
+  btns.forEach((b,i)=>$(`mb${i}`).addEventListener('click',b.a));
+  $('mov').classList.remove('hid');
+}
+function closeM(){ $('mov').classList.add('hid'); }
+function openConf(msg,onOk){
+  openM('⚠ Conferma',`<p style="color:var(--g700);font-size:13.5px;line-height:1.6">${esc(msg)}</p>`,[
+    {l:'Annulla',c:'bs',a:closeM},
+    {l:'Conferma',c:'bd',a:async()=>{ await onOk(); closeM(); }},
+  ]);
+}
+$('mcls').addEventListener('click',closeM);
+$('mov').addEventListener('click',e=>{ if(e.target===$('mov')) closeM(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeM(); });
+
+/* ══════════════════════════════════════════
+   LOGIN / LOGOUT
+══════════════════════════════════════════ */
+async function doLogin(){
+  const email=$('lem').value.trim(), pwd=$('lpw').value;
+  const btn=$('lbtn'), err=$('lerr');
+  err.style.display='none';
+  if(!email||!pwd){err.textContent='Inserisci email e password.';err.style.display='block';return;}
+  btn.innerHTML='<span class="spn"></span> Accesso…'; btn.disabled=true;
+  try{
+    const auth=await supaLogin(email,pwd);
+    S.token=auth.access_token;
+    const [profilo]=await db('GET',T('profili'),{flt:`id=eq.${auth.user.id}`});
+    if(!profilo) throw new Error('Profilo non trovato. Contatta l\'amministratore.');
+    if(profilo.attivo===false) throw new Error('Utente disabilitato. Contatta l\'amministratore.');
+    S.user=profilo;
+    await loadAll();
+    // arricchisce S.user con le sedi caricate da loadAll
+    const userConSedi=S.utenti.find(u=>u.id===S.user.id);
+    if(userConSedi) S.user={...S.user,sedi:userConSedi.sedi||[]};
+    $('lp').classList.add('hid'); $('app').classList.remove('hid');
+    $('tb-date').textContent=`📅 ${fmt(new Date())}`;
+    renderSidebar(); goPage('calendario');
+    logAct('login','Accesso effettuato');
+    toast(`Benvenuto, ${S.user.nome}! ✅`);
+  }catch(e){
+    err.textContent=e.message; err.style.display='block';
+    btn.innerHTML='Accedi'; btn.disabled=false;
+  }
+}
+
+async function doLogout(){
+  await supaLogout();
+  S.user=null; S.token=null;
+  $('app').classList.add('hid'); $('lp').classList.remove('hid'); $('lpw').value='';
+}
+
+$('lbtn').addEventListener('click',doLogin);
+$('lem').addEventListener('keydown',e=>{ if(e.key==='Enter') $('lpw').focus(); });
+$('lpw').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+$('lout').addEventListener('click',()=>openConf('Uscire dall\'applicazione?',doLogout));
+
+$('lem').focus();
+</script>
+</body>
+</html>
