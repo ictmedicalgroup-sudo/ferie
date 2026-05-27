@@ -1029,7 +1029,7 @@ function openUtenteModal(u){
     ${!isNew?`<div class="fg"><div class="fl">Nuova password <span style="font-weight:400;font-size:11px;color:var(--g500)">(lascia vuoto per non modificare)</span></div>
       <input class="fi" id="um-newpwd" type="password" placeholder="Minimo 6 caratteri"/>
       <div id="um-pwd-warn" style="display:none">${PWD_WARN_HTML}</div></div>`:''}`;
-  openM(isNew?'+ Nuovo utente':'&#9998; Modifica utente',body,[
+  openM(isNew?'+ Nuovo utente':'✏ Modifica utente',body,[
     {l:'Annulla',c:'bs',a:closeM},
     {l:'Salva',c:'bp',a:async()=>{
       const nome=document.getElementById('um-nome').value.trim();
@@ -1340,6 +1340,9 @@ async function doLogin(){
   }catch(e){
     err.textContent=e.message; err.style.display='block';
     btn.innerHTML='Accedi'; btn.disabled=false;
+  }finally{
+    btn.disabled=false;
+    if(btn.innerHTML!=='Accedi') btn.innerHTML='Accedi';
   }
 }
 
