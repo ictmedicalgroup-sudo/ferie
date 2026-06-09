@@ -1034,6 +1034,10 @@ function openUtenteModal(u){
       <div class="fch" id="um-sedi">
         ${S.sedi.map(s=>`<label class="fci"><input type="checkbox" value="${s.id}"${selS.includes(s.id)?' checked':''}> ${sedeDot(s.id)}</label>`).join('')}
       </div></div>
+    <div class="fg"><div class="fl">Sedi visibili a calendario <span style="font-weight:400;font-size:11px;color:var(--g500)">(default: stesse delle sedi associate)</span></div>
+      <div class="fch" id="um-calsedi">
+        ${S.sedi.map(s=>`<label class="fci"><input type="checkbox" value="${s.id}"${(u?.calendario_sedi||u?.sedi||[]).includes(s.id)?' checked':''}> ${sedeDot(s.id)}</label>`).join('')}
+      </div></div>
     <div class="fg"><label class="tw">
       <div class="tg"><input type="checkbox" id="um-attivo" ${u?.attivo!==false?'checked':''}><span class="ts2"></span></div>
       <span class="fl" style="margin:0">Utente attivo</span>
@@ -1051,6 +1055,7 @@ function openUtenteModal(u){
       const attivo=document.getElementById('um-attivo').checked;
       const tipoId=document.getElementById('um-tipo')?.value||null;
       const sediSel=[...document.querySelectorAll('#um-sedi input:checked')].map(x=>x.value);
+      const calSel=[...document.querySelectorAll('#um-calsedi input:checked')].map(x=>x.value);
       if(!nome||!cog||!email){toast('Compila tutti i campi obbligatori','err');return;}
       try{
         if(isNew){
@@ -1058,7 +1063,7 @@ function openUtenteModal(u){
           const exists=emailInfo?.dataset.exists==='true';
           const pwd=document.getElementById('um-pwd')?.value||'';
           if(!exists&&pwd.length<6){toast('Password minimo 6 caratteri','err');return;}
-          const payload={action:'create',email,nome,cognome:cog,ruolo,sedi:sediSel,tipo_id:tipoId};
+          const payload={action:'create',email,nome,cognome:cog,ruolo,sedi:sediSel,calendario_sedi:calSel,tipo_id:tipoId};
           if(!exists) payload.password=pwd;
           const res=await fetch(`${CFG.FN}/ferie-manage-user`,{method:'POST',
             headers:{'Authorization':`Bearer ${S.token}`,'Content-Type':'application/json'},
@@ -1070,14 +1075,14 @@ function openUtenteModal(u){
         }else{
           const pwd=document.getElementById('um-newpwd')?.value||'';
           if(pwd&&pwd.length<6){toast('Password minimo 6 caratteri','err');return;}
-          const payload={action:'update',user_id:u.id,nome,cognome:cog,ruolo,attivo,sedi:sediSel,tipo_id:tipoId};
+          const payload={action:'update',user_id:u.id,nome,cognome:cog,ruolo,attivo,sedi:sediSel,calendario_sedi:calSel,tipo_id:tipoId};
           if(pwd) payload.password=pwd;
           const res=await fetch(`${CFG.FN}/ferie-manage-user`,{method:'POST',
             headers:{'Authorization':`Bearer ${S.token}`,'Content-Type':'application/json'},
             body:JSON.stringify(payload)});
           const data=await res.json();
           if(!data.ok) throw new Error(data.error||'Errore aggiornamento');
-          S.utenti=S.utenti.map(x=>x.id===u.id?{...x,nome,cognome:cog,ruolo,attivo,sedi:sediSel}:x);
+          S.utenti=S.utenti.map(x=>x.id===u.id?{...x,nome,cognome:cog,ruolo,attivo,sedi:sediSel,calendario_sedi:calSel}:x);
           closeM();toast('Utente aggiornato ✅');
         }
         renderPage();
